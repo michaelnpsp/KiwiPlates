@@ -1,2 +1,2 @@
 # KiwiPlates
-Just Another Nameplates Addon
+Just Another Nameplates Addon for World of Warcraft
