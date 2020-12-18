@@ -44,7 +44,7 @@ local UnitGroupRolesAssigned = UnitGroupRolesAssigned or function() return "NONE
 local C_GetNamePlateForUnit  = C_NamePlate.GetNamePlateForUnit
 local C_SetNamePlateSelfSize = C_NamePlate.SetNamePlateSelfSize
 local DifficultyColor = addon.DIFFICULTY_LEVEL_COLOR
-local CastingBarFrame_SetUnit = isClassic and KiwiPlatesCastingBarFrame_SetUnit or CastingBarFrame_SetUnit
+local CastingBarFrame_SetUnit = isClassic and KiwiPlatesCastingBarFrame_SetUnit or addon.CastingBarFrame_SetUnit
 
 local InCombat = false
 local InGroup

@@ -135,3 +135,41 @@ do
 		ShowDialog(message, text or "", funcAccept, funcCancel or addon.Dummy)
 	end
 end
+
+-- We cannot use the blizzard CastingBarFrame_SetUnit because taints the blizzard secure code.
+-- So we use a non perfect replacement, avoiding changing castBar(self) variables like self.unit
+-- Unresolved issue: if the castbar is enabled (due to a skin change) and the unit was already
+-- casting some spell, the castbar does not become visible. Could be fixed not disabling the
+-- castbars and using HookScript on OnShow to change the castbar transparecy using method
+-- SetAlpha(0 or 1), but i think this is too hackish.
+function addon.CastingBarFrame_SetUnit(self, unit)
+	local registered = self:IsEventRegistered("UNIT_SPELLCAST_START")
+	if unit then
+		if not registered then
+			self:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED")
+			self:RegisterEvent("UNIT_SPELLCAST_DELAYED")
+			self:RegisterEvent("UNIT_SPELLCAST_CHANNEL_START")
+			self:RegisterEvent("UNIT_SPELLCAST_CHANNEL_UPDATE")
+			self:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
+			self:RegisterEvent("UNIT_SPELLCAST_INTERRUPTIBLE")
+			self:RegisterEvent("UNIT_SPELLCAST_NOT_INTERRUPTIBLE")
+			self:RegisterEvent("PLAYER_ENTERING_WORLD")
+			self:RegisterUnitEvent("UNIT_SPELLCAST_START", unit)
+			self:RegisterUnitEvent("UNIT_SPELLCAST_STOP", unit)
+			self:RegisterUnitEvent("UNIT_SPELLCAST_FAILED", unit)
+		end
+	elseif registered then
+		self:UnregisterEvent("UNIT_SPELLCAST_INTERRUPTED")
+		self:UnregisterEvent("UNIT_SPELLCAST_DELAYED")
+		self:UnregisterEvent("UNIT_SPELLCAST_CHANNEL_START")
+		self:UnregisterEvent("UNIT_SPELLCAST_CHANNEL_UPDATE")
+		self:UnregisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
+		self:UnregisterEvent("UNIT_SPELLCAST_INTERRUPTIBLE")
+		self:UnregisterEvent("UNIT_SPELLCAST_NOT_INTERRUPTIBLE")
+		self:UnregisterEvent("PLAYER_ENTERING_WORLD")
+		self:UnregisterEvent("UNIT_SPELLCAST_START")
+		self:UnregisterEvent("UNIT_SPELLCAST_STOP")
+		self:UnregisterEvent("UNIT_SPELLCAST_FAILED")
+		self:Hide()
+	end
+end
