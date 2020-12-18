@@ -137,7 +137,7 @@ do
 end
 
 -- We cannot use the blizzard CastingBarFrame_SetUnit because taints the blizzard secure code.
--- So we use a non perfect replacement, avoiding changing castBar(self) variables like self.unit
+-- So we use a non perfect replacement to avoid changing castBar(self) variables like self.unit
 -- Unresolved issue: if the castbar is enabled (due to a skin change) and the unit was already
 -- casting some spell, the castbar does not become visible. Could be fixed not disabling the
 -- castbars and using HookScript on OnShow to change the castbar transparecy using method
