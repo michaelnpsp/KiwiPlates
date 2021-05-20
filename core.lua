@@ -22,7 +22,7 @@ local band = bit.band
 local rshift = bit.rshift
 
 local isClassic = addon.isClassic
-local isRetail = not isClassic
+local isVanilla = addon.isVanilla
 local UNKNOWNOBJECT = UNKNOWNOBJECT
 local IsInRaid = IsInRaid
 local UnitGUID = UnitGUID
@@ -44,7 +44,7 @@ local UnitGroupRolesAssigned = UnitGroupRolesAssigned or function() return "NONE
 local C_GetNamePlateForUnit  = C_NamePlate.GetNamePlateForUnit
 local C_SetNamePlateSelfSize = C_NamePlate.SetNamePlateSelfSize
 local DifficultyColor = addon.DIFFICULTY_LEVEL_COLOR
-local CastingBarFrame_SetUnit = isClassic and KiwiPlatesCastingBarFrame_SetUnit or addon.CastingBarFrame_SetUnit
+local CastingBarFrame_SetUnit = isVanilla and KiwiPlatesCastingBarFrame_SetUnit or addon.CastingBarFrame_SetUnit
 
 local InCombat = false
 local InGroup
@@ -655,18 +655,21 @@ end
 ----------------------------------------------------------------
 
 local function CreateCastBar(UnitFrame)
-	local castBar = UnitFrame.castBar
-	if castBar then -- retail
-		if cfgClassicBorders then
-			castBar.Border = castBar:CreateTexture(nil, 'ARTWORK')
-		end
-	else -- classic
+	local castBar = UnitFrame.castBar or UnitFrame.CastBar -- retail or TBC castbar
+	if not castBar then -- vanilla
 		castBar = CreateFrame("StatusBar", nil, UnitFrame, "KiwiPlatesCastingBarFrameTemplate")
+	elseif UnitFrame.CastBar then -- tbc
+		UnitFrame.castBar = castBar -- for some reason the castbar name is uppercased in tbc
+		castBar.Border:Hide() -- we cannot reuse tbc border because blizzard code is continuosly changing the border width
+		castBar:ClearAllPoints()
+	end
+	if isClassic then -- vanilla or tbc
 		castBar:SetPoint("TOPLEFT",  UnitFrame, "BOTTOMLEFT",  0, 0)
 		castBar:SetPoint("TOPRIGHT", UnitFrame, "BOTTOMRIGHT", 0, 0)
 	end
 	if cfgClassicBorders then
-		castBar.Border:SetDrawLayer('ARTWORK',7)
+		castBar.cBorder = isVanilla and castBar.Border or castBar:CreateTexture(nil, 'ARTWORK')
+		castBar.cBorder:SetDrawLayer('ARTWORK',7)
 	end
 	UnitFrame.kkCastBar = castBar
 end
@@ -748,9 +751,13 @@ do
 				castBar:SetStatusBarTexture( TexCache[db.castBarTexture] )
 				castBar.Text:SetFont( FontCache[db.castBarFontFile or 'Roboto Condensed Bold'], db.castBarFontSize or 8, db.castBarFontFlags or 'OUTLINE' )
 				if cfgClassicBorders then
-					SetBorderTexture( castBar, castBar.Border, db.castBarBorderTexture, db.castBarBorderColor or ColorWhite )
+					SetBorderTexture( castBar, castBar.cBorder, db.castBarBorderTexture, db.castBarBorderColor or ColorWhite )
 				else
 					castBar.Icon:SetTexCoord( 0.1, 0.9, 0.1, 0.9 )
+				end
+				if addon.isTBC then
+					castBar:SetScript('OnShow', nil) -- ugly fix, OnShow blizzard code changes the icon size and messes with the spell text.
+					castBar.Text:Show()
 				end
 				UnitFrame.kCastBar = castBar
 			else
@@ -902,8 +909,8 @@ do
 				-- in classic we execute this code if gap is not defined to reanchor healthBar the "(isClassic and 0)" above forces to execute this code
 				-- in retail is not necessary because healthBar is already anchored to castBar with "correct" point values
 				healthBar:ClearAllPoints()
-				healthBar:SetPoint('BOTTOMLEFT', anchorFrame, 'BOTTOMLEFT',  0,  gap or 0 )
-				healthBar:SetPoint('BOTTOMRIGHT',anchorFrame, 'BOTTOMRIGHT', 0,  gap or 0 )
+				healthBar:SetPoint('BOTTOMLEFT', anchorFrame, 'TOPLEFT',  0,  gap or 0 )
+				healthBar:SetPoint('BOTTOMRIGHT',anchorFrame, 'TOPRIGHT', 0,  gap or 0 )
 				UnitFrame.castBarGap = gap
 			end
 			healthBar:SetShown( db.kHealthBar_enabled )
@@ -1240,7 +1247,7 @@ function addon:NAME_PLATE_UNIT_ADDED(unit)
 	local plateFrame = C_GetNamePlateForUnit(unit)
 	if UnitIsUnit(unit,'player') then return PersonalBarAdded(plateFrame) end
 	if plateFrame then
-		if isRetail then self:NAME_PLATE_CREATED(plateFrame) end
+		if not isVanilla then self:NAME_PLATE_CREATED(plateFrame) end
 		local guid = UnitGUID(unit)
 		local UnitFrame = plateFrame.UnitFrame
 		NamePlates[plateFrame] = UnitFrame
@@ -1752,7 +1759,7 @@ end )
 ----------------------------------------------------------------
 
 addon:RegisterMessage('ENABLE', function()
-	if isClassic then addon:RegisterEvent("NAME_PLATE_CREATED") end
+	if isVanilla then addon:RegisterEvent("NAME_PLATE_CREATED") end
 	addon:RegisterEvent("NAME_PLATE_UNIT_ADDED")
 	addon:RegisterEvent("NAME_PLATE_UNIT_REMOVED")
 	addon:RegisterEvent("PLAYER_TARGET_CHANGED")

@@ -1,5 +1,5 @@
 -- CastBar management for WoW classic
-if select(4, GetBuildInfo())>20000 then return end
+if select(4, GetBuildInfo())>=20000 then return end
 
 local LibCC = LibStub("LibClassicCasterino")
 local next =  next

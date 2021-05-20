@@ -6,7 +6,11 @@
 
 local addon = CreateFrame('Frame')
 addon.addonName = ...
-addon.isClassic = select(4, GetBuildInfo())<20000
+local versionCli = select(4,GetBuildInfo())
+addon.isClassic = versionCli<30000 -- vanilla or tbc
+addon.isVanilla = versionCli<20000
+addon.isTBC     = versionCli>=20000 and versionCli<30000
+addon.isWoW90   = versionCli>=90000
 
 ----------------------------------------------------------------
 -- Messages management

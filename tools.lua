@@ -146,26 +146,30 @@ function addon.CastingBarFrame_SetUnit(self, unit)
 	local registered = self:IsEventRegistered("UNIT_SPELLCAST_START")
 	if unit then
 		if not registered then
+			if addon.isWoW90 then
+				self:RegisterEvent("UNIT_SPELLCAST_INTERRUPTIBLE")
+				self:RegisterEvent("UNIT_SPELLCAST_NOT_INTERRUPTIBLE")
+			end
 			self:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED")
 			self:RegisterEvent("UNIT_SPELLCAST_DELAYED")
 			self:RegisterEvent("UNIT_SPELLCAST_CHANNEL_START")
 			self:RegisterEvent("UNIT_SPELLCAST_CHANNEL_UPDATE")
 			self:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
-			self:RegisterEvent("UNIT_SPELLCAST_INTERRUPTIBLE")
-			self:RegisterEvent("UNIT_SPELLCAST_NOT_INTERRUPTIBLE")
 			self:RegisterEvent("PLAYER_ENTERING_WORLD")
 			self:RegisterUnitEvent("UNIT_SPELLCAST_START", unit)
 			self:RegisterUnitEvent("UNIT_SPELLCAST_STOP", unit)
 			self:RegisterUnitEvent("UNIT_SPELLCAST_FAILED", unit)
 		end
 	elseif registered then
+		if addon.isWoW90 then
+			self:UnregisterEvent("UNIT_SPELLCAST_INTERRUPTIBLE")
+			self:UnregisterEvent("UNIT_SPELLCAST_NOT_INTERRUPTIBLE")
+		end
 		self:UnregisterEvent("UNIT_SPELLCAST_INTERRUPTED")
 		self:UnregisterEvent("UNIT_SPELLCAST_DELAYED")
 		self:UnregisterEvent("UNIT_SPELLCAST_CHANNEL_START")
 		self:UnregisterEvent("UNIT_SPELLCAST_CHANNEL_UPDATE")
 		self:UnregisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
-		self:UnregisterEvent("UNIT_SPELLCAST_INTERRUPTIBLE")
-		self:UnregisterEvent("UNIT_SPELLCAST_NOT_INTERRUPTIBLE")
 		self:UnregisterEvent("PLAYER_ENTERING_WORLD")
 		self:UnregisterEvent("UNIT_SPELLCAST_START")
 		self:UnregisterEvent("UNIT_SPELLCAST_STOP")

@@ -4,10 +4,12 @@
 
 local addon = KiwiPlates
 
-local isRetail = not addon.isClassic
+local apiHasDurations = not addon.isVanilla
+local apiHasBuffs     = not addon.isClassic
 local CreateFrame = CreateFrame
 local UnitReaction = UnitReaction
 local format = string.format
+
 
 addon.defaults.auras = { enabled = "custom", buffsCentered = true }
 
@@ -35,7 +37,7 @@ local function OnLeave()
 end
 
 local function CreateBuffFrame(UnitFrame)
-	if isRetail then
+	if apiHasBuffs then
 		UnitFrame.__BlizzBuffFrameHidden = true
 		UnitFrame.BuffFrame:HookScript('OnShow',HideBlizzBuffFrame )
 	end
@@ -47,7 +49,7 @@ local function CreateBuffFrame(UnitFrame)
 end
 
 local function DisableBlizAuras(UnitFrame)
-	if isRetail and not UnitFrame.__BlizzBuffFrameHidden then
+	if apiHasBuffs and not UnitFrame.__BlizzBuffFrameHidden then
 		UnitFrame.__BlizzBuffFrameHidden = true
 		UnitFrame.BuffFrame:HookScript( 'OnShow',HideBlizzBuffFrame )
 	end
@@ -82,7 +84,7 @@ end
 
 do -- UNIT_AURA event
 	local NamePlatesByUnit = addon.NamePlatesByUnit
-	local UnitAura = isRetail and UnitAura or LibStub("LibClassicDurations").UnitAuraDirect
+	local UnitAura = apiHasDurations and UnitAura or LibStub("LibClassicDurations").UnitAuraDirect
 	local UnitIsUnit = UnitIsUnit
 	local UnitReaction = UnitReaction
 	local CooldownFrame_Set = CooldownFrame_Set
@@ -91,7 +93,7 @@ do -- UNIT_AURA event
 	local name, texture, count, duration, expiration, isBuf, isSteal, _
 	local buffsWidth, buffsHeight, buffsSpacing
 	local buffCountTotal = 0
-	local BuffTemplate = isRetail and "NameplateBuffButtonTemplate" or "KiwiPlateBuffButtonTemplate"
+	local BuffTemplate = apiHasBuffs and "NameplateBuffButtonTemplate" or "KiwiPlateBuffButtonTemplate"
 
 	local function CreateAura(type, index, filter)
 		local buff = buffList[buffIndex]
@@ -190,7 +192,7 @@ do -- UNIT_AURA event
 			buffFrame:SetWidth( buffIndex*(buffsWidth+buffsSpacing)-buffsSpacing )
 		end
 
-		if isRetail then UnitFrame.BuffFrame:Hide() end
+		if apiHasBuffs then UnitFrame.BuffFrame:Hide() end
 	end
 end
 
@@ -213,7 +215,7 @@ addon:RegisterMessage('INITIALIZE', function()
 		addon:RegisterMessage('NAME_PLATE_UNIT_ADDED',  addon.UNIT_AURA)
 		addon:RegisterMessage('PLAYER_TARGET_ACQUIRED', addon.UNIT_AURA)
 		addon:RegisterEvent('UNIT_AURA')
-		if addon.isClassic then LibStub("LibClassicDurations"):Register(addon) end
+		if addon.isVanilla then LibStub("LibClassicDurations"):Register(addon) end
 		hideBlizzard = true
 	else  -- no auras
 		NamePlateDriverFrame:UnregisterEvent('UNIT_AURA')

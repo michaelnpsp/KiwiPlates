@@ -3,7 +3,7 @@
 --=================================================================
 
 local addon = KiwiPlates
-if not addon.isClassic then return end
+if not addon.isVanilla then return end
 
 addon.defaults.targetCastBar = {}
 
