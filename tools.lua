@@ -5,6 +5,7 @@
 local addon = KiwiPlates
 
 local tremove = table.remove
+local UnitName = UnitName
 
 -- Empty function
 addon.Dummy = function() end
@@ -176,4 +177,14 @@ function addon.CastingBarFrame_SetUnit(self, unit)
 		self:UnregisterEvent("UNIT_SPELLCAST_FAILED")
 		self:Hide()
 	end
+end
+
+function addon.GetCustomDungeonRole(unit)
+	local roles = addon.db.roles
+	return roles[ UnitName(unit) or 0] or 'DAMAGER'
+end
+
+function addon.SetCustomDungeonRole(unit, role)
+	local roles = addon.db.roles
+	roles[ UnitName(unit) ] = role
 end

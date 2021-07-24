@@ -31,6 +31,7 @@ local UnitLevel = UnitLevel
 local UnitClass = UnitClass
 local UnitIsUnit = UnitIsUnit
 local UnitHealth = UnitHealth
+local UnitIsPlayer = UnitIsPlayer
 local UnitIsFriend = UnitIsFriend
 local UnitReaction = UnitReaction
 local IsInInstance = IsInInstance
@@ -40,10 +41,10 @@ local UnitIsTapDenied = UnitIsTapDenied
 local UnitClassification = UnitClassification
 local UnitAffectingCombat = UnitAffectingCombat
 local GetNumSubgroupMembers = GetNumSubgroupMembers
-local UnitGroupRolesAssigned = UnitGroupRolesAssigned or function() return "NONE" end
 local C_GetNamePlateForUnit  = C_NamePlate.GetNamePlateForUnit
 local C_SetNamePlateSelfSize = C_NamePlate.SetNamePlateSelfSize
 local DifficultyColor = addon.DIFFICULTY_LEVEL_COLOR
+local UnitGroupRolesAssigned = UnitGroupRolesAssigned or addon.GetCustomDungeonRole
 local CastingBarFrame_SetUnit = isVanilla and KiwiPlatesCastingBarFrame_SetUnit or addon.CastingBarFrame_SetUnit
 
 local InCombat = false
@@ -137,6 +138,7 @@ local WidgetNames = {
 	'kLevelText',
 	'kAttackers',
 	'kIcon',
+	'kTargetClass',
 	'RaidTargetFrame',
 	-- Used to check if the widget was already created, field value exists in the UnitFrame if the widget was already created.
 	kCastBar      = 'kkCastBar',
@@ -147,6 +149,7 @@ local WidgetNames = {
 	kLevelText    = 'kkLevelText',
 	kAttackers    = 'kkAttackers',
 	kIcon         = 'kkIcon',
+	kTargetClass  = 'kkTargetClass',
 	RaidTargetFrame = 'RaidTargetFrame',
 }
 
@@ -323,6 +326,10 @@ do
 	end
 end
 
+local function PlayerInParty()
+	return not IsInRaid() and GetNumSubgroupMembers()>0
+end
+
 ----------------------------------------------------------------
 -- Table that caches settings for each skin to update widgets
 -- colors & values, example:
@@ -359,6 +366,7 @@ local ColorDefaults = {
 	kNameText     = ColorWhite,
 	kLevelText    = ColorWhite,
 	kAttackers    = ColorWhite,
+	kTargetClass  = ColorWhite,
 }
 
 -- Calculate and return the status color for the unit
@@ -481,6 +489,14 @@ local WidgetMethods = {
 		local h = rshift(mask,3) * (20/128)
 		kAttackers:SetTexCoord( 0, w*(20/128), h, h+(20/128) )
 		kAttackers:SetWidth( w * (UnitFrame.__skin.attackersIconSize or 14) )
+	end,
+	kTargetClass = function(UnitFrame)
+		if cfgTestSkin then
+			UnitFrame.kTargetClass:SetTexCoord( unpack(ClassTexturesCoord.PRIEST) )
+			UnitFrame.kTargetClass:SetVertexColor(1,1,1,1)
+		else
+			UnitFrame.kTargetClass:SetTexCoord(0,0,0,0)
+		end
 	end,
 }
 
@@ -733,6 +749,18 @@ local function CreateAttackers(UnitFrame)
 end
 
 ----------------------------------------------------------------
+-- kTargetClass widget creation
+----------------------------------------------------------------
+
+local function CreateTargetClass(UnitFrame)
+	local RaidTargetFrame = UnitFrame.RaidTargetFrame
+	local kTargetClass = RaidTargetFrame:CreateTexture()
+	kTargetClass:SetTexture('Interface\\Addons\\KiwiPlates\\media\\classif')
+	kTargetClass:SetTexCoord( 0,0,0,0 )
+	UnitFrame.kkTargetClass = kTargetClass
+end
+
+----------------------------------------------------------------
 -- Skin a nameplate
 ----------------------------------------------------------------
 
@@ -851,6 +879,22 @@ do
 			elseif kAttackers then
 				UnitFrame.kAttackers = nil
 				kAttackers:Hide()
+			end
+		end,
+		kTargetClass = function(UnitFrame, frameAnchor, db, enabled)
+			local kTargetClass = UnitFrame.kkTargetClass
+			if enabled then
+				kTargetClass.displayedGUID = nil
+				kTargetClass:ClearAllPoints()
+				kTargetClass:SetSize( db.targetClassIconSize or 14, db.targetClassIconSize or 14 )
+				kTargetClass:SetPoint('RIGHT', frameAnchor, 'RIGHT', db.targetClassIconOffsetX or 0, db.targetClassIconOffsetY or 0)
+				kTargetClass:SetTexture(db.targetClassIconTexture or 'Interface\\Addons\\KiwiPlates\\media\\classif')
+				kTargetClass:SetTexCoord(0,0,0,0)
+				kTargetClass:Show()
+				UnitFrame.kTargetClass = kTargetClass
+			elseif kTargetClass then
+				kTargetClass:Hide()
+				UnitFrame.kTargetClass = nil
 			end
 		end,
 		kIcon = function(UnitFrame, frameAnchor, db, enabled)
@@ -1006,7 +1050,8 @@ end
 
 local function UpdatePlatesUnitCombatValues()
 	for plateFrame, UnitFrame in pairs(NamePlates) do
-		UnitFrame.__combat = UnitAffectingCombat(UnitFrame.unit) or UnitIsFriend(target[UnitFrame.unit],'player')
+		local unit = UnitFrame.unit
+		UnitFrame.__combat = UnitAffectingCombat(unit) or ( UnitIsPlayer(target[unit]) and UnitIsFriend(target[unit],'player') )
 	end
 end
 
@@ -1014,7 +1059,8 @@ local UpdateCombatTracking
 do
 	local timer = CreateTimer(.25, function()
 		for plateFrame, UnitFrame in pairs(NamePlates) do
-			local combat = UnitAffectingCombat(UnitFrame.unit) or UnitIsFriend(target[UnitFrame.unit],'player')
+			local unit = UnitFrame.unit
+			local combat = UnitAffectingCombat(unit) or ( UnitIsPlayer(target[unit]) and UnitIsFriend(target[unit],'player') )
 			if combat ~= UnitFrame.__combat then
 				UnitFrame.__combat = combat
 				SkinPlate(plateFrame, UnitFrame)
@@ -1061,6 +1107,43 @@ do
 		end
 	end )
 	function UpdateAttackersTracking(enabled)
+		if not enabled ~= not timer:IsPlaying() then
+			timer:SetPlaying(not not enabled)
+			if not enabled then
+				for plateFrame, UnitFrame in pairs(NamePlates) do
+					UnitFrame.__attackers = 0
+				end
+			end
+		end
+	end
+end
+
+----------------------------------------------------------------
+-- Attackers widget update
+----------------------------------------------------------------
+
+local UpdateTargetClassTracking
+do
+	local timer = CreateTimer(.1, function()
+		if IsInRaid() then return end
+		for plateFrame, UnitFrame in pairs(NamePlates) do
+			local kTargetClass = UnitFrame.kTargetClass
+			if kTargetClass then
+				local unit = target[UnitFrame.unit]
+				local guid = UnitGUID(unit)
+				if guid ~= kTargetClass.displayedGUID then
+					if guid and UnitIsPlayer(unit) and not UnitIsUnit(unit,'player') then
+						local _, class = UnitClass(unit)
+						kTargetClass:SetTexCoord( unpack(ClassTexturesCoord[class or 0] or CoordEmpty) )
+					else
+						kTargetClass:SetTexCoord( 0,0,0,0 )
+					end
+					kTargetClass.displayedGUID = guid
+				end
+			end
+		end
+	end )
+	function UpdateTargetClassTracking(enabled)
 		if not enabled ~= not timer:IsPlaying() then
 			timer:SetPlaying(not not enabled)
 			if not enabled then
@@ -1216,6 +1299,7 @@ do
 		kNameText     = CreateNameText,
 		kIcon         = CreateIcon,
 		kAttackers    = CreateAttackers,
+		kTargetClass  = CreateTargetClass,
 	}
 	function CreateNamePlate(UnitFrame)
 		for i=1,#activeWidgets do
@@ -1261,7 +1345,7 @@ function addon:NAME_PLATE_UNIT_ADDED(unit)
 		UnitFrame.__reaction = Reactions [ UnitReaction( unit, "player") or 1 ]
 		UnitFrame.__level  = UnitLevel( unit )
 		UnitFrame.__classification = UnitClassification(unit) or 'unknow'
-		UnitFrame.__combat = UnitAffectingCombat(unit) or UnitIsFriend(target[unit],'player')
+		UnitFrame.__combat = UnitAffectingCombat(unit) or ( UnitIsPlayer(target[unit]) and UnitIsFriend(target[unit],'player') )
 		UnitFrame.__tapped = UnitIsTapDenied(unit)
 		UnitFrame.__attackable = UnitCanAttack('player',unit)
 		UnitFrame.__attackers = 0
@@ -1365,10 +1449,15 @@ end
 ----------------------------------------------------------------
 
 function addon:GROUP_ROSTER_UPDATE()
-	local group = not IsInRaid() and GetNumSubgroupMembers()>0
+	local group = PlayerInParty()
 	if group ~= InGroup then
 		InGroup = group
-		UpdateAttackersTracking(InCombat and InGroup)
+		if activeWidgets.kAttackers then
+			UpdateAttackersTracking(InCombat and InGroup)
+		end
+		if activeWidgets.kTargetClass then
+			UpdateTargetClassTracking(InCombat and InGroup)
+		end
 	end
 end
 
@@ -1437,6 +1526,9 @@ function addon:PLAYER_REGEN_DISABLED()
 	if activeWidgets.kAttackers then
 		UpdateAttackersTracking(InGroup)
 	end
+	if activeWidgets.kTargetClass then
+		UpdateTargetClassTracking(InGroup)
+	end
 	if ConditionFields['@combat'] then
 		UpdateCombatTracking(true)
 		CombatReskinCheck(true)
@@ -1454,6 +1546,9 @@ function addon:PLAYER_REGEN_ENABLED()
 	self:SendMessage('COMBAT_END')
 	if activeWidgets.kAttackers then
 		UpdateAttackersTracking(false)
+	end
+	if activeWidgets.kTargetClass then
+		UpdateTargetClassTracking(false)
 	end
 	if ConditionFields['@combat'] then
 		UpdateCombatTracking(false)
@@ -1688,7 +1783,7 @@ do
 		UpdateEventRegister( self, self.db.general.highlight or ConditionFields['@mouseover'], "UPDATE_MOUSEOVER_UNIT" )
 		UpdateEventRegister( self, activeStatuses.reaction or ConditionFields['@attackable'] or ConditionFields['@reaction'], "UNIT_FLAGS", "UNIT_TARGETABLE_CHANGED", "UNIT_FACTION" )
 		UpdateEventRegister( self, activeWidgets.kLevelText or ConditionFields['@classification'], 'UNIT_CLASSIFICATION_CHANGED' )
-		UpdateEventRegister( self, activeWidgets.kAttackers, "GROUP_ROSTER_UPDATE" )
+		UpdateEventRegister( self, activeWidgets.kAttackers or activeWidgets.kTargetClass, "GROUP_ROSTER_UPDATE" )
 
 		UpdateAttackersTracking( activeWidgets.kAttackers and InCombat and InGroup)
 
@@ -1750,7 +1845,7 @@ end
 
 addon:RegisterMessage('INITIALIZE', function()
 	InstanceType = select(2, IsInInstance())
-	InGroup = not IsInRaid() and GetNumSubgroupMembers()>0
+	InGroup = PlayerInParty()
 	UpdateVisibility()
 end )
 

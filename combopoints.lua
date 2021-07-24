@@ -24,6 +24,10 @@ texture:SetTexture('Interface\\Addons\\KiwiPlates\\media\\combopoints')
 texture:SetAllPoints()
 texture:SetTexCoord(0,0,0,0)
 
+--
+local frameParent
+local flagCastBarAdjusted
+
 -- update combo points
 local function Update(UnitFrame)
 	local v = UnitPower('player', POWER_TYPE) or 0
@@ -45,7 +49,8 @@ local function Attach(UnitFrame)
 	local db = addon.db.combo
 	local iconSize = db.iconSize or 20
 	local adjY = db.castBarAdjust and (castBar and castBar:IsVisible() and castBar:GetHeight()*db.castBarAdjust) or 0
-	frame:SetParent(UnitFrame.healthBar or UnitFrame)
+	frameParent = UnitFrame.healthBar or UnitFrame
+	frame:SetParent( frameParent )
 	frame:SetFrameLevel( UnitFrame.RaidTargetFrame:GetFrameLevel() + 1 )
 	frame:SetPoint('CENTER', db.offsetX or 0,  (db.offsetY or -15) + adjY)
 	frame:SetSize( iconSize*4, iconSize)
@@ -60,6 +65,7 @@ local function Detach()
 	frame:SetParent(nil)
 	frame:ClearAllPoints()
 	frame.UnitFrame = nil
+	frameParent = nil
 end
 
 -- power update events
@@ -90,20 +96,22 @@ local function NamePlateAdded(UnitFrame)
 	end
 end
 
-local function AdjustComboFrame(castBar)
-	if castBar.__comboParent == frame:GetParent() then
-		local db = addon.db.combo
-		local adjY = (db.castBarAdjust and castBar:IsVisible() and castBar:GetHeight()*db.castBarAdjust) or 0
-		frame:ClearAllPoints()
-		frame:SetPoint('CENTER', db.offsetX or 0,  (db.offsetY or -15) + adjY)
+local function AdjustComboFrame(castBar, event)
+	if frameParent and castBar.__comboParent == frameParent then
+		local visible = castBar.casting or castBar.channeling
+		if flagCastBarAdjusted ~= visible then
+			local db = addon.db.combo
+			local adjY = (db.castBarAdjust and visible and castBar:GetHeight()*db.castBarAdjust) or 0
+			frame:ClearAllPoints()
+			frame:SetPoint('CENTER', db.offsetX or 0,  (db.offsetY or -15) + adjY)
+			flagCastBarAdjusted = visible
+		end
 	end
 end
 
 local function NamePlateCreated(UnitFrame)
 	local castBar = UnitFrame.kkCastBar
 	if castBar and not castBar.__comboParent then
-		castBar:HookScript('OnShow',AdjustComboFrame)
-		castBar:HookScript('OnHide',AdjustComboFrame)
 		castBar.__comboParent = UnitFrame.healthBar or UnitFrame
 	end
 end
@@ -118,6 +126,9 @@ addon:RegisterMessage('UPDATE', function()
 		frame:RegisterUnitEvent('UNIT_DISPLAYPOWER','player')
 		if addon.db.combo.castBarAdjust then
 			addon:RegisterMessage('NAME_PLATE_CREATED', NamePlateCreated)
+			if not addon.isVanilla then
+				hooksecurefunc( 'CastingBarFrame_OnEvent', AdjustComboFrame)
+			end
 		end
 	else
 		addon:UnregisterMessage('PLAYER_TARGET_CHANGED', TargetChanged)

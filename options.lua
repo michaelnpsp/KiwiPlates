@@ -1863,6 +1863,67 @@ Opt_SetupOption( 'Skins/Settings', 'Classif Icon', {
 	},
 }, nil, { disabled = function() return not selectedSkin.kIcon_enabled end } )
 
+Opt_SetupOption( 'Skins/Settings', 'Target Class', {
+	targetClassIconEnabled = {
+		type = "toggle",
+		order = 0, width = "double",
+		name = FormatTitle("Target Class", true),
+		get = function() return selectedSkin.kTargetClass_enabled end,
+		set = function (_, value)
+			selectedSkin.kTargetClass_enabled= value
+			Update()
+		end,
+	},
+	header1 = { type = "header", order = 5, name = "Position & Size" },
+	targetClassIconSize =  {
+		type = 'range', order = 43, name = 'Icon Size', min = 0, softMax = 32, step = 1,
+		name = "Icon Size",
+		desc = "Classification Icon Size. Set Zero to hide the Icon.",
+		get = function() return selectedSkin.targetClassIconSize or 14 end,
+		set = function(info,value)
+			selectedSkin.targetClassIconSize = value~=14 and value or nil
+			Update()
+		end,
+	},
+	targetClassIconOffsetX =  {
+		type = 'range', order = 41, name = 'X Adjust', softMin = -32, softMax = 200, step = 1,
+		get = function() return selectedSkin.targetClassIconOffsetX or 0 end,
+		set = function(info,value)
+			selectedSkin.targetClassIconOffsetX = value~=0 and value or nil
+			Update()
+		end,
+		disabled = function() return selectedSkin.targetClassIconSize == 0 or not selectedSkin.kTargetClass_enabled end,
+	},
+	targetClassIconOffsetY =  {
+		type = 'range', order = 42, name = 'Y Adjust', softMin = -50, softMax = 50, step = 1,
+		get = function() return selectedSkin.targetClassIconOffsetY or 0 end,
+		set = function(info,value)
+			selectedSkin.targetClassIconOffsetY = value~=0 and value or nil
+			Update()
+		end,
+		disabled = function() return selectedSkin.targetClassIconSize == 0 or not selectedSkin.kTargetClass_enabled end,
+	},
+	header2 = { type = "header", order = 50, name = "Icon to Display" },
+	targetClassIconTexture = {
+		type = 'select', width = 'normal', order = 53,
+		name = 'Select icons theme',
+		get = function()
+				return selectedSkin.targetClassIconTexture or 'Interface\\Addons\\KiwiPlates\\media\\classif'
+		end,
+		set = function(info,value)
+			selectedSkin.targetClassIconTexture = (value~='Interface\\Addons\\KiwiPlates\\media\\classif') and value or nil
+			Update()
+		end,
+		values = {
+			['Interface\\Addons\\KiwiPlates\\media\\classif']   = 'Default',
+			['Interface\\Addons\\KiwiPlates\\media\\classifsb'] = 'Squared Black',
+			['Interface\\Addons\\KiwiPlates\\media\\classifsw'] = 'Squared White',
+			['Interface\\Addons\\KiwiPlates\\media\\classifcb'] = 'Circled Black',
+			['Interface\\Addons\\KiwiPlates\\media\\classifcw'] = 'Circled White',
+		},
+	},
+}, nil, { disabled = function() return not selectedSkin.kTargetClass_enabled end } )
+
 Opt_SetupOption( 'Skins/Settings', 'Attackers', {
 	attackersEnabled = {
 		type = "toggle",
@@ -2225,36 +2286,48 @@ function addon.ToggleOptions()
 	addon.ToggleOptions()
 end
 
-function addon.OnChatCommand(args)
-	args = strtrim(strlower(type(args)=='string' and args or ''))
-	if addon.isClassic and args~='' and args~='options' then
-		local arg1,arg2,arg3 = strsplit(" ",args,3)
-		if arg1=='tank' then
-			if arg2=='clear' then
-				wipe(addon.db.roles)
-				print("KiwiPlates: Tanks list has been cleared")
-				return
-			else
-				if arg2==nil or arg2=='target' then arg2 = UnitIsFriend('player','target') and UnitName('target') end
-				if arg2 and strlen(arg2)>=3 then
-					addon.db.roles[arg2] = not (addon.db.roles[arg2]) and 'TANK' or nil
-					print( string.format( "KiwiPlates: %s role assigned to %s", addon.db.roles[arg2] or 'NONE', arg2 ) )
-					return
-				end
+do
+	local roles = { tank = 'TANK', healer = 'HEALER', dps = 'DAMAGER' }
+
+	local function SetDungeonRole(role,unit)
+		if role then
+			local unitName = ( unit and unit~='target' and unit ) or ( UnitIsFriend('player','target') and UnitName('target') )
+			if unitName and strlen(unitName)>=3 then
+				addon.db.roles[unitName] = role~='DAMAGER' and role or nil
+				print( string.format( 'KiwiPlates: %s role assigned to "%s"', role, unitName ) )
+				return true
 			end
 		end
+	end
+
+	local function DisplayHelp()
 		print("KiwiPlates commands:")
 		print("  /kiwiplates help")
 		print("  /kiwiplates options")
-		print("  /kiwiplates tank playername||target  ; toggle tank")
-		print("  /kiwiplates tank clear  ; clear tanks list")
+		print("  /kiwiplates tank playername||target  ; set tank role")
+		print("  /kiwiplates healer playername||target  ; set healer role")
+		print("  /kiwiplates dps playername||target  ; set damager role")
 		if next(addon.db.roles) then
-			local tanks = {}
-			for k in pairs(addon.db.roles) do tanks[#tanks+1] = '"'..k..'"'; end
+			local tanks, healers = {}, {}
+			for name,role in pairs(addon.db.roles) do
+				local t = (role=='TANK' and tanks) or (role=='HEALER' and healers)
+				if t then t[#t+1] = '"'..name..'"' end
+			end
 			print("  Tanks: ", table.concat( tanks,', ') )
+			print("  Healers: ", table.concat( healers,', ') )
 		end
-	else
-		addon.ToggleOptions()
+	end
+
+	function addon.OnChatCommand(args)
+		args = strtrim(strlower(type(args)=='string' and args or ''))
+		if addon.isClassic and args~='' and args~='options' then
+			local arg1,arg2 = strsplit(" ",args,2)
+			if not SetDungeonRole( roles[arg1], arg2 ) then
+				DisplayHelp()
+			end
+		else
+			addon.ToggleOptions()
+		end
 	end
 end
 
