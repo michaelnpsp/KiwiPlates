@@ -43,3 +43,14 @@ powerbar.lua
 castbarplayer.lua
 castbartarget.lua
 #@end-non-retail@
+
+widgets\nametext.lua
+widgets\leveltext.lua
+widgets\healthtext.lua
+widgets\castbar.lua
+widgets\healthbar.lua
+widgets\healthborder.lua
+widgets\raidtarget.lua
+widgets\classicon.lua
+widgets\attackers.lua
+widgets\targetclass.lua

@@ -17,9 +17,6 @@ local format  = string.format
 local tinsert = table.insert
 local tremove = table.remove
 local tconcat = table.concat
-local bor = bit.bor
-local band = bit.band
-local rshift = bit.rshift
 
 local isClassic = addon.isClassic
 local isVanilla = addon.isVanilla
@@ -47,21 +44,16 @@ local DifficultyColor = addon.DIFFICULTY_LEVEL_COLOR
 local UnitGroupRolesAssigned = UnitGroupRolesAssigned or addon.GetCustomDungeonRole
 local CastingBarFrame_SetUnit = isVanilla and KiwiPlatesCastingBarFrame_SetUnit or addon.CastingBarFrame_SetUnit
 
-local InCombat = false
-local InGroup
-local InstanceType
 local pixelScale
 local targetFrame
 local targetExists
 local mouseFrame
-local RealMobHealth -- Classic
 
 local GetPlateSkin
 local ConditionFields = {}
 local activeWidgets = {}
 local activeStatuses = {}
 
-local cfgTestSkin -- Test Mode
 local cfgAlpha1
 local cfgAlpha2
 local cfgAlpha3
@@ -103,13 +95,7 @@ local ColorWhite = { 1,1,1,1 }
 
 local ColorDefault = ColorWhite
 
-local ColorWidgets  = {
-	kHealthBar    = "Health Bar",
-	kHealthBorder = "Health Border",
-	kHealthText   = "Health Text",
-	kLevelText    = "Level Text",
-	kNameText     = "Name Text",
-}
+local ColorWidgets  = {}
 
 local ColorStatuses = {
 	color    = "Custom Color",
@@ -122,35 +108,6 @@ local ColorStatuses = {
 -- Color statuses that cannot be overrided (for example by the threat module)
 local ColorsNonOverride = {
 	blizzard = true, health = true,
-}
-
--- Health tags: percent, health, maxhealth
-local HealthTags = { ['$p'] = '', ['$h'] = '', ['$m'] = '' }
-
--- Used to call CreateMethods & SkinMethods
-local WidgetNames = {
-	--Available Widgets
-	'kCastBar',
-	'kHealthBar',
-	'kHealthBorder',
-	'kHealthText',
-	'kNameText',
-	'kLevelText',
-	'kAttackers',
-	'kIcon',
-	'kTargetClass',
-	'RaidTargetFrame',
-	-- Used to check if the widget was already created, field value exists in the UnitFrame if the widget was already created.
-	kCastBar      = 'kkCastBar',
-	kHealthBar    = 'kkHealthBar',
-	kHealthBorder = 'kkHealthBorder',
-	kHealthText   = 'kkHealthText',
-	kNameText     = 'kkNameText',
-	kLevelText    = 'kkLevelText',
-	kAttackers    = 'kkAttackers',
-	kIcon         = 'kkIcon',
-	kTargetClass  = 'kkTargetClass',
-	RaidTargetFrame = 'RaidTargetFrame',
 }
 
 local FontCache = setmetatable({}, {__index = function(t,k) local v = Media:Fetch('font',      k or 'Roboto Condensed Bold'); t[k or 'Roboto Condensed Bold'] = v; return v end})
@@ -211,7 +168,7 @@ local ClassTexturesCoord = {
 }
 
 ----------------------------------------------------------------
---
+-- Database Defaults
 ----------------------------------------------------------------
 
 addon.defaults = {
@@ -234,6 +191,7 @@ addon.defaults = {
 
 local HiddenFrame = CreateFrame("Frame")
 HiddenFrame:Hide()
+addon.HiddenFrame = HiddenFrame
 
 ----------------------------------------------------------------
 -- Highlight texture
@@ -282,16 +240,6 @@ do
 	end
 end
 
-local function AdjustHealth(h)
-	if h<1000 then
-		return h,''
-	elseif h<1000000 then
-		return h/1000,'K'
-	else
-		return h/1000000,'M'
-	end
-end
-
 local FormatNameText
 do
 	local tip = CreateFrame('GameTooltip','KiwiPlatesNameTooltip',UIParent,'GameTooltipTemplate')
@@ -331,43 +279,16 @@ local function PlayerInParty()
 end
 
 ----------------------------------------------------------------
--- Table that caches settings for each skin to update widgets
--- colors & values, example:
--- WidgetUpdate[skin] = {
---   -- functions to update widgets texts and statusbars
---   [1] = WidgetMethods.kHealthBar, [2] = WidgetMethods.kLevelTetx, ...
---   -- user defined colors & active widgets
---	 ['kHealthBar'] = customColor1, ['kNameText']  = customColor2, ['ClassificationFrame'] = true, ...
---   -- statuses
---	 methods  = {	['kHealthBar'] = UpdateColorReaction, ['kLevelText'] = UpdateColorCustom, ['kNameText'] = UpdateColorCustom },
---	 reaction = { 'kHealthBar' },
---	 color    = { 'kNameText', 'kLevelText' }, -- color = customColor = statusName
--- }
-----------------------------------------------------------------
-
-local WidgetUpdate = {}
-
-----------------------------------------------------------------
 -- Statuses color painting management
 ----------------------------------------------------------------
 
-local ColorStatusDefaults = {
-	kHealthBar    = 'reaction',
-	kHealthBorder = 'color',
-	kHealthText   = 'color',
-	kNameText     = 'color',
-	kLevelText    = 'level',
-}
+-- default color sources/statuses used to paint widgets
+-- example: { kHealthBorder = 'color', kLevelText = 'reaction' }
+local ColorStatusDefaults = {}
 
-local ColorDefaults = {
-	kHealthBorder = ColorBlack,
-	kHealthBar    = ColorWhite,
-	kHealthText   = ColorWhite,
-	kNameText     = ColorWhite,
-	kLevelText    = ColorWhite,
-	kAttackers    = ColorWhite,
-	kTargetClass  = ColorWhite,
-}
+-- default static colors used to paint widgets
+-- example { kHealthBorder = ColorBlack }
+local ColorDefaults = {}
 
 -- Calculate and return the status color for the unit
 local ColorMethods = {
@@ -429,76 +350,33 @@ local function UpdateWidgetStatusColor(UnitFrame, statusName)
 end
 
 ----------------------------------------------------------------
--- Widgets values assignment management
+-- Widgets management
 ----------------------------------------------------------------
 
-local WidgetMethods = {
-	kHealthBar = addon.Dummy, -- no update needed because we are using blizzard health bar
-	kHealthText = function(UnitFrame)
-		local h,m
-		local unit = UnitFrame.unit
-		if RealMobHealth then
-			h,m = RealMobHealth(unit)
-		else
-			h = UnitHealth(unit)
-			m = UnitHealthMax(unit)
-		end
-		local p = h/m
-		local mask = UnitFrame.__skin.healthMaskValue -- mask = something like "$h/$m|$p%"
-		if mask then
-			HealthTags['$p'] = format("%d",p*100)
-			HealthTags['$h'] = (h<1000 and h) or (h<1000000 and format("%.1fK",h/1000)) or format("%.1fM",h/1000000)
-			HealthTags['$m'] = (m<1000 and m) or (m<1000000 and format("%.1fK",m/1000)) or format("%.1fM",m/1000000)
-			UnitFrame.kHealthText:SetText( gsub(mask,"%$%l",HealthTags) )
-		else
-			UnitFrame.kHealthText:SetFormattedText( '%.0f%%',p*100 )
-		end
-	end,
-	kNameText = function(UnitFrame)
-		local mask = UnitFrame.__skin.nameFormat
-		UnitFrame.kNameText:SetText( mask and FormatNameText(UnitFrame, mask) or UnitFrame.__name )
-	end,
-	kLevelText = function(UnitFrame)
-		local level = UnitFrame.__level
-		local class = UnitFrame.__classification
-		local text  = level<0 and '??' or level .. (Classifications[class] or '')
-		UnitFrame.kLevelText:SetText( text )
-	end,
-	kIcon = function(UnitFrame)
-		local skin = UnitFrame.__skin
-		if not skin.classIconUserTexture then
-			local key
-			if cfgTestSkin then
-				key = UnitFrame.__type=='Player' and UnitFrame.__class or 'elite'
-			else
-				if UnitFrame.__type=='Player' then
-					if not skin.classIconDisablePlayers then
-						key = UnitFrame.__class
-					end
-				elseif not skin.classIconDisableNPCs then
-					key = UnitFrame.__classification
-				end
-			end
-			UnitFrame.kIcon:SetTexCoord( unpack(ClassTexturesCoord[key] or CoordEmpty) )
-		end
-	end,
-	kAttackers = function(UnitFrame)
-		local kAttackers = UnitFrame.kAttackers
-		local mask = cfgTestSkin and 28 or UnitFrame.__attackers
-		local w = band(mask,7)
-		local h = rshift(mask,3) * (20/128)
-		kAttackers:SetTexCoord( 0, w*(20/128), h, h+(20/128) )
-		kAttackers:SetWidth( w * (UnitFrame.__skin.attackersIconSize or 14) )
-	end,
-	kTargetClass = function(UnitFrame)
-		if cfgTestSkin then
-			UnitFrame.kTargetClass:SetTexCoord( unpack(ClassTexturesCoord.PRIEST) )
-			UnitFrame.kTargetClass:SetVertexColor(1,1,1,1)
-		else
-			UnitFrame.kTargetClass:SetTexCoord(0,0,0,0)
-		end
-	end,
-}
+-- Registered widgets:
+-- widgetKey => widget table, see widgets folder for widgets tables definitions
+local WidgetRegistered = {}
+
+-- Registered Widgets Keys, index part: keys when widget active, hash part: key when widget active => key of created widget
+-- example: { kLevelText, kLevelText = 'kkLevelText' }
+local WidgetNames = {}
+
+-- cached widget.Update() functions
+local WidgetMethods = {}
+
+-- Table that caches settings for each skin to update widgets
+-- colors & values, example:
+-- WidgetUpdate[skin] = {
+--   -- functions to update widgets texts and statusbars
+--   [1] = WidgetMethods.kHealthBar, [2] = WidgetMethods.kLevelTetx, ...
+--   -- user defined colors & active widgets
+--	 ['kHealthBar'] = customColor1, ['kNameText']  = customColor2, ['ClassificationFrame'] = true, ...
+--   -- statuses
+--	 methods  = {	['kHealthBar'] = UpdateColorReaction, ['kLevelText'] = UpdateColorCustom, ['kNameText'] = UpdateColorCustom },
+--	 reaction = { 'kHealthBar' },
+--	 color    = { 'kNameText', 'kLevelText' }, -- color = customColor = statusName
+-- }
+local WidgetUpdate = {}
 
 function UpdatePlateValues(UnitFrame)
 	local widgets = UnitFrame.__update
@@ -512,7 +390,6 @@ end
 ----------------------------------------------------------------
 local HealthFrame
 do
-	local UpdateText = WidgetMethods.kHealthText
 	local UpdateColorHealth = ColorMethods.health
 	local UpdateColorReaction = ColorMethods.reaction
 	HealthFrame = CreateFrame("Frame")
@@ -521,7 +398,7 @@ do
 		if UnitFrame then
 			local update, percent = UnitFrame.__update
 			if UnitFrame.kHealthText then
-				percent = UpdateText(UnitFrame)
+				percent = WidgetMethods.kHealthText(UnitFrame)
 			end
 			local widgets = update.health
 			if #widgets>0 then
@@ -573,430 +450,77 @@ local function DisableBlizzardStuff(UnitFrame)
 end
 
 ----------------------------------------------------------------
--- kHealthBar widget creation
-----------------------------------------------------------------
-
-local function CreateHealthBar(UnitFrame)
-	local healthBar = UnitFrame.healthBar
-	local layer, level = healthBar.barTexture:GetDrawLayer()
-	local kHealthBar = healthBar:CreateTexture(nil, layer, nil, level+1)
-	kHealthBar:SetPoint("TOPLEFT", healthBar.barTexture, "TOPLEFT")
-	kHealthBar:SetPoint("BOTTOMRIGHT", healthBar.barTexture, "BOTTOMRIGHT")
-	kHealthBar.SetWidgetColor = kHealthBar.SetVertexColor
-	UnitFrame.kkHealthBar = kHealthBar
-end
-
-----------------------------------------------------------------
--- kHealthBorder widget creation
-----------------------------------------------------------------
-
-local function CreateHealthBorderClassic(UnitFrame)
-	local healthBar = UnitFrame.healthBar
-	local layer = healthBar.barTexture:GetDrawLayer()
-	local border = isClassic and healthBar.border:GetRegions() or healthBar.border:CreateTexture()
-	border.widgetName = 'kHealthBorder'
-	border:SetTexCoord(0, 1, 0, 1)
-	border:SetDrawLayer( layer, 7 )
-	border:SetParent(healthBar)
-	border.SetWidgetColor = border.SetVertexColor
-	UnitFrame.kkHealthBorder = border
-	return border
-end
-
-local CreateHealthBorderRetail
-do
-	local BORDER_POINTS = {
-		{ "TOPRIGHT",    "TOPLEFT",    0, 1, "BOTTOMRIGHT", "BOTTOMLEFT",  0, -1, "SetWidth" },
-		{ "TOPLEFT",     "TOPRIGHT",   0, 1, "BOTTOMLEFT",  "BOTTOMRIGHT", 0, -1, "SetWidth" },
-		{ "TOPRIGHT",    "BOTTOMLEFT", 0, 0, "TOPLEFT",     "BOTTOMRIGHT", 0, 0 , "SetHeight" },
-		{ "BOTTOMRIGHT", "TOPRIGHT",   0, 0, "BOTTOMLEFT",  "TOPLEFT",     0, 0 , "SetHeight" },
-	}
-
-	local function SetBorderColor(border,r,g,b,a)
-		border[1]:SetVertexColor(r,g,b,a)
-		border[2]:SetVertexColor(r,g,b,a)
-		border[3]:SetVertexColor(r,g,b,a)
-		border[4]:SetVertexColor(r,g,b,a)
-	end
-
-	local function SetBorderSize(border,size)
-		if border.size ~= size then
-			local frame = border[1]:GetParent()
-			for i=1,4 do
-				local p = BORDER_POINTS[i]
-				local t = border[i]
-				t:ClearAllPoints()
-				t:SetPoint( p[1], frame, p[2], p[3]*size, p[4]*size )
-				t:SetPoint( p[5], frame, p[6], p[7]*size, p[8]*size )
-				t[ p[9] ](t, size)
-			end
-			border.size = size
-		end
-	end
-
-	local function Hide(border)
-		SetBorderColor(border,0,0,0,0)
-	end
-
-	function CreateHealthBorderRetail(UnitFrame)
-		local frame = UnitFrame.healthBar
-		local border = { widgetName= 'kHealthBorder', size=1 }
-		for i=1,4 do
-			local p = BORDER_POINTS[i]
-			local t = frame:CreateTexture(nil, "BACKGROUND")
-			t:SetPoint( p[1], frame, p[2], p[3], p[4] )
-			t:SetPoint( p[5], frame, p[6], p[7], p[8] )
-			t[ p[9] ](t,1)
-			t:SetColorTexture(1,1,1,1)
-			border[i] = t
-		end
-		border.SetWidgetColor = SetBorderColor
-		border.SetWidgetSize  = SetBorderSize
-		border.Hide = Hide
-		UnitFrame.kkHealthBorder = border
-		return border
-	end
-end
-
-local function CreateHealthBorder(UnitFrame)
-	if cfgClassicBorders then
-		CreateHealthBorderClassic(UnitFrame)
-	else
-		CreateHealthBorderRetail(UnitFrame)
-	end
-end
-
-----------------------------------------------------------------
--- kCastBar widget creation
-----------------------------------------------------------------
-
-local function CreateCastBar(UnitFrame)
-	local castBar = UnitFrame.castBar or UnitFrame.CastBar -- retail or TBC castbar
-	if not castBar then -- vanilla
-		castBar = CreateFrame("StatusBar", nil, UnitFrame, "KiwiPlatesCastingBarFrameTemplate")
-	elseif UnitFrame.CastBar then -- tbc
-		UnitFrame.castBar = castBar -- for some reason the castbar name is uppercased in tbc
-		castBar.Border:Hide() -- we cannot reuse tbc border because blizzard code is continuosly changing the border width
-		castBar:ClearAllPoints()
-	end
-	if isClassic then -- vanilla or tbc
-		castBar:SetPoint("TOPLEFT",  UnitFrame, "BOTTOMLEFT",  0, 0)
-		castBar:SetPoint("TOPRIGHT", UnitFrame, "BOTTOMRIGHT", 0, 0)
-	end
-	if cfgClassicBorders then
-		castBar.cBorder = isVanilla and castBar.Border or castBar:CreateTexture(nil, 'ARTWORK')
-		castBar.cBorder:SetDrawLayer('ARTWORK',7)
-	end
-	UnitFrame.kkCastBar = castBar
-end
-
-----------------------------------------------------------------
--- kLevelText widget creation
-----------------------------------------------------------------
-
-local function CreateLevelText(UnitFrame)
-	local text  = UnitFrame.RaidTargetFrame:CreateFontString(nil, "BORDER")
-	text.SetWidgetColor = text.SetTextColor
-	text:SetShadowOffset(1,-1)
-	text:SetShadowColor(0,0,0, 1)
-	UnitFrame.kkLevelText = text
-end
-
-----------------------------------------------------------------
--- kNameText widget creation
-----------------------------------------------------------------
-
-local function CreateNameText(UnitFrame)
-	local text = UnitFrame.RaidTargetFrame:CreateFontString(nil, "BORDER")
-	text.SetWidgetColor = text.SetTextColor
-	text:SetShadowOffset(1,-1)
-	text:SetShadowColor(0,0,0, 1)
-	UnitFrame.kkNameText = text
-	UnitFrame.name:SetParent(HiddenFrame)
-end
-
-----------------------------------------------------------------
--- kHealthText widget creation
-----------------------------------------------------------------
-
-local function CreateHealthText(UnitFrame)
-	local text = UnitFrame.RaidTargetFrame:CreateFontString(nil, "BORDER")
-	text.SetWidgetColor = text.SetTextColor
-	text:SetShadowOffset(1,-1)
-	text:SetShadowColor(0,0,0, 1)
-	UnitFrame.kkHealthText = text
-end
-
-----------------------------------------------------------------
--- kIcon widget creation
-----------------------------------------------------------------
-
-local function CreateIcon(UnitFrame)
-	local icon = UnitFrame.RaidTargetFrame:CreateTexture()
-	UnitFrame.kkIcon = icon
-end
-
-----------------------------------------------------------------
--- kAttackers widget creation
-----------------------------------------------------------------
-
-local function CreateAttackers(UnitFrame)
-	local RaidTargetFrame = UnitFrame.RaidTargetFrame
-	local kAttackers = RaidTargetFrame:CreateTexture()
-	kAttackers:SetTexture("Interface\\Addons\\KiwiPlates\\media\\roles")
-	kAttackers:SetTexCoord( 0,0,0,0 )
-	UnitFrame.kkAttackers= kAttackers
-end
-
-----------------------------------------------------------------
--- kTargetClass widget creation
-----------------------------------------------------------------
-
-local function CreateTargetClass(UnitFrame)
-	local RaidTargetFrame = UnitFrame.RaidTargetFrame
-	local kTargetClass = RaidTargetFrame:CreateTexture()
-	kTargetClass:SetTexture('Interface\\Addons\\KiwiPlates\\media\\classif')
-	kTargetClass:SetTexCoord( 0,0,0,0 )
-	UnitFrame.kkTargetClass = kTargetClass
-end
-
-----------------------------------------------------------------
 -- Skin a nameplate
 ----------------------------------------------------------------
 
-local SkinPlate
-do
-	local SkinMethods = {
-		kCastBar = function(UnitFrame, frameAnchor, db, enabled)
-			if enabled then
-				local castBar = UnitFrame.kkCastBar
-				local cbHeight = db.castBarHeight or 10
-				castBar.BorderShield:SetSize(cbHeight, cbHeight)
-				castBar.Icon:ClearAllPoints()
-				castBar.Icon:SetPoint("BOTTOMRIGHT", castBar, "BOTTOMLEFT", db.castBarIconOffsetX or -1, db.castBarIconOffsetY or 0)
-				castBar.Icon:SetSize(db.castBarIconSize or cbHeight, db.castBarIconSize or cbHeight)
-				castBar.Icon:SetShown(db.castBarIconEnabled)
-				castBar:SetStatusBarTexture( TexCache[db.castBarTexture] )
-				castBar.Text:SetFont( FontCache[db.castBarFontFile or 'Roboto Condensed Bold'], db.castBarFontSize or 8, db.castBarFontFlags or 'OUTLINE' )
-				if cfgClassicBorders then
-					SetBorderTexture( castBar, castBar.cBorder, db.castBarBorderTexture, db.castBarBorderColor or ColorWhite )
-				else
-					castBar.Icon:SetTexCoord( 0.1, 0.9, 0.1, 0.9 )
-				end
-				if addon.isTBC then
-					castBar:SetScript('OnShow', nil) -- ugly fix, OnShow blizzard code changes the icon size and messes with the spell text.
-					castBar.Text:Show()
-				end
-				UnitFrame.kCastBar = castBar
-			else
-				UnitFrame.kCastBar = nil
-			end
-		end,
-		kHealthBar = function(UnitFrame, frameAnchor, db, enabled)
-			local kHealthBar = UnitFrame.kkHealthBar
-			local healthBar = UnitFrame.healthBar
-			if enabled then
-				UnitFrame.kHealthBar = kHealthBar
-				if db.kHealthBar_color_status~='blizzard' then
-					healthBar.barTexture:SetColorTexture(0,0,0,0)
-					kHealthBar:SetTexture( TexCache[db.healthBarTexture] )
-					kHealthBar:Show()
-				else
-					healthBar.barTexture:SetTexture( TexCache[db.healthBarTexture] )
-					kHealthBar:Hide()
+-- cached widget.Layout() functions, indexes by widget key
+local SkinMethods = {}
 
-				end
-			elseif kHealthBar then
-				UnitFrame.kHealthBar = nil
-				healthBar:Hide()
-				kHealthBar:Hide()
-			end
-		end,
-		kHealthBorder = function(UnitFrame, frameAnchor, db, enabled)
-			local kHealthBorder = UnitFrame.kkHealthBorder
-			if enabled then
-				if cfgClassicBorders then
-					SetBorderTexture(UnitFrame.healthBar, kHealthBorder, db.borderTexture )
-					kHealthBorder:Show()
-					UnitFrame.kHealthBorder = kHealthBorder
-				else
-					kHealthBorder:SetWidgetSize( db.borderSize or 1 )
-					UnitFrame.kHealthBorder = kHealthBorder
-				end
-			elseif kHealthBorder then
-				UnitFrame.kHealthBorder = nil
-				kHealthBorder:Hide()
-			end
-		end,
-		kNameText = function(UnitFrame, frameAnchor, db, enabled)
-			local kNameText = UnitFrame.kkNameText
-			if enabled then
-				kNameText:SetPoint("BOTTOM", frameAnchor, "TOP", db.nameOffsetX or 0, db.nameOffsetY or -1);
-				kNameText:SetFont( FontCache[db.nameFontFile or 'Roboto Condensed Bold'], db.nameFontSize or 12, db.nameFontFlags or 'OUTLINE' )
-				UnitFrame.kNameText = kNameText
-				UnitFrame.kNameText:SetWordWrap(db.nameFormat~=nil)
-				kNameText:Show()
-			elseif kNameText then
-				UnitFrame.kNameText = nil
-				kNameText:Hide()
-			end
-		end,
-		kLevelText = function(UnitFrame, frameAnchor, db, enabled)
-			local kLevelText = UnitFrame.kkLevelText
-			if enabled then
-				kLevelText:ClearAllPoints()
-				kLevelText:SetPoint( db.levelAnchorPoint or "LEFT", frameAnchor, "CENTER", db.levelOffsetX or -62, db.levelOffsetY or -4);
-				kLevelText:SetFont( FontCache[db.levelFontFile or 'Accidental Presidency'], db.levelFontSize or 14, db.levelFontFlags or 'OUTLINE' )
-				UnitFrame.kLevelText = kLevelText
-				kLevelText:Show()
-			elseif kLevelText then
-				UnitFrame.kLevelText = nil
-				kLevelText:Hide()
-			end
-		end,
-		kHealthText = function(UnitFrame, frameAnchor, db, enabled)
-			local kHealthText = UnitFrame.kkHealthText
-			if enabled then
-				kHealthText:ClearAllPoints()
-				kHealthText:SetPoint( db.healthTextAnchorPoint or 'RIGHT', frameAnchor, 'CENTER', db.healthTextOffsetX or 66, db.healthTextOffsetY or -4)
-				kHealthText:SetFont( FontCache[db.healthTextFontFile or 'Accidental Presidency'], db.healthTextFontSize or 14, db.healthTextFontFlags or 'OUTLINE' )
-				UnitFrame.kHealthText = kHealthText
-				kHealthText:Show()
-			elseif kHealthText then
-				UnitFrame.kHealthText = nil
-				kHealthText:Hide()
-			end
-		end,
-		kAttackers = function(UnitFrame, frameAnchor, db, enabled)
-			local kAttackers = UnitFrame.kkAttackers
-			if enabled then
-				local size = db.attackersIconSize or 14
-				kAttackers:ClearAllPoints()
-				kAttackers:SetSize( bit.band(UnitFrame.__attackers or 0, 7) * size , size )
-				kAttackers:SetPoint( db.attackersAnchorPoint or 'CENTER', frameAnchor, 'CENTER', db.attackersOffsetX or 0, db.attackersOffsetY or 0)
-				kAttackers:Show()
-				UnitFrame.kAttackers = kAttackers
-			elseif kAttackers then
-				UnitFrame.kAttackers = nil
-				kAttackers:Hide()
-			end
-		end,
-		kTargetClass = function(UnitFrame, frameAnchor, db, enabled)
-			local kTargetClass = UnitFrame.kkTargetClass
-			if enabled then
-				kTargetClass.displayedGUID = nil
-				kTargetClass:ClearAllPoints()
-				kTargetClass:SetSize( db.targetClassIconSize or 14, db.targetClassIconSize or 14 )
-				kTargetClass:SetPoint('RIGHT', frameAnchor, 'RIGHT', db.targetClassIconOffsetX or 0, db.targetClassIconOffsetY or 0)
-				kTargetClass:SetTexture(db.targetClassIconTexture or 'Interface\\Addons\\KiwiPlates\\media\\classif')
-				kTargetClass:SetTexCoord(0,0,0,0)
-				kTargetClass:Show()
-				UnitFrame.kTargetClass = kTargetClass
-			elseif kTargetClass then
-				kTargetClass:Hide()
-				UnitFrame.kTargetClass = nil
-			end
-		end,
-		kIcon = function(UnitFrame, frameAnchor, db, enabled)
-			local kIcon = UnitFrame.kkIcon
-			if enabled then
-				kIcon:ClearAllPoints()
-				kIcon:SetSize( db.classIconSize or 14, db.classIconSize or 14 )
-				kIcon:SetPoint('RIGHT', frameAnchor, 'LEFT', db.classIconOffsetX or 0, db.classIconOffsetY or 0)
-				if db.classIconUserTexture then
-					kIcon:SetTexture(db.classIconUserTexture)
-					kIcon:SetTexCoord(0,1,0,1)
-				else
-					kIcon:SetTexture(db.classIconTexture or 'Interface\\Addons\\KiwiPlates\\media\\classif')
-					kIcon:SetTexCoord(0,0,0,0)
-				end
-				UnitFrame.kIcon = kIcon
-				kIcon:Show()
-			elseif kIcon then
-				UnitFrame.kIcon = nil
-				kIcon:Hide()
-			end
-		end,
-		RaidTargetFrame = function(UnitFrame, frameAnchor, db, enabled)
-			local RaidTargetFrame = UnitFrame.RaidTargetFrame
-			if enabled then
-				RaidTargetFrame.RaidTargetIcon:SetParent(RaidTargetFrame)
-				RaidTargetFrame:SetPoint("RIGHT", frameAnchor, "LEFT", db.raidTargetOffsetX or 154, db.raidTargetOffsetY or 0);
-				RaidTargetFrame:SetSize( db.raidTargetSize or 20, db.raidTargetSize or 20 )
-				RaidTargetFrame:Show()
-			else
-				RaidTargetFrame.RaidTargetIcon:SetParent(HiddenFrame) -- we cannot simply Hide() this frame because our widgets are parented to it
-			end
-		end,
-	}
-
-	function SkinPlate(plateFrame, UnitFrame, UnitAdded)
-		-- calculate skin
-		local db = addon.db.skins[ GetPlateSkin(UnitFrame, InCombat, InstanceType) ]
-		-- opacity & frame level
-		local target = UnitFrame.__target
-		local mouse =  UnitFrame.__mouseover
-		UnitFrame:SetFrameStrata( (target or mouse) and "HIGH" or "MEDIUM" )
-		UnitFrame:SetAlpha( (mouse and 1) or (target and cfgAlpha1) or (not targetExists and cfgAlpha3) or cfgAlpha2 )
-		local Reskin = (db ~= UnitFrame.__skin)
-		if Reskin or UnitAdded then -- blizzard code resets these settings, so we need to reapply them even if our skin has not changed.
-			-- UnitFrame
-			UnitFrame:ClearAllPoints()
-			UnitFrame:SetPoint( 'TOP', plateFrame, 'TOP', 0, 0 )
-			UnitFrame:SetPoint( 'BOTTOM', plateFrame, 'BOTTOM', 0, db.plateOffsetY or 6 )
-			UnitFrame:SetWidth( (db.healthBarWidth or 136)  + cfgPlatesAdjustW )
-			-- healthBar
-			local healthBar = UnitFrame.healthBar
-			local anchorFrame = UnitFrame.castBar or UnitFrame
-			local gap = db.castBarGap or (isClassic and 0) or nil
-			if gap ~= UnitFrame.castBarGap then
-				-- in classic we execute this code if gap is not defined to reanchor healthBar the "(isClassic and 0)" above forces to execute this code
-				-- in retail is not necessary because healthBar is already anchored to castBar with "correct" point values
-				healthBar:ClearAllPoints()
-				healthBar:SetPoint('BOTTOMLEFT', anchorFrame, 'TOPLEFT',  0,  gap or 0 )
-				healthBar:SetPoint('BOTTOMRIGHT',anchorFrame, 'TOPRIGHT', 0,  gap or 0 )
-				UnitFrame.castBarGap = gap
-			end
-			healthBar:SetShown( db.kHealthBar_enabled )
-			healthBar:SetHeight( db.healthBarHeight or 12 )
-			-- castBar
-			local castBar = UnitFrame.kkCastBar
-			if castBar then
-				castBar:SetHeight( db.castBarHeight or 10 )	-- SetHeight() is called for disabled castBars, wrong but necessary in retail because healthbar is anchored to the castbar
-				if not isClassic then
-					castBar.Text:SetFont( FontCache[db.castBarFontFile or 'Roboto Condensed Bold'], db.castBarFontSize or 8, db.castBarFontFlags or 'OUTLINE' )
-				end
-				if db.kCastBar_enabled and not ((UnitFrame.__reaction=='friendly')==db.castBarHiddenFriendly) then
-					CastingBarFrame_SetUnit(castBar, UnitFrame.unit, false, true)
-				else
-					CastingBarFrame_SetUnit(castBar, nil)
-				end
-			end
+local function SkinPlate(plateFrame, UnitFrame, UnitAdded)
+	-- calculate skin
+	local db = addon.db.skins[ GetPlateSkin(UnitFrame, addon.InCombat, addon.InstanceType) ]
+	-- opacity & frame level
+	local target = UnitFrame.__target
+	local mouse =  UnitFrame.__mouseover
+	UnitFrame:SetFrameStrata( (target or mouse) and "HIGH" or "MEDIUM" )
+	UnitFrame:SetAlpha( (mouse and 1) or (target and cfgAlpha1) or (not targetExists and cfgAlpha3) or cfgAlpha2 )
+	local Reskin = (db ~= UnitFrame.__skin)
+	if Reskin or UnitAdded then -- blizzard code resets these settings, so we need to reapply them even if our skin has not changed.
+		-- UnitFrame
+		UnitFrame:ClearAllPoints()
+		UnitFrame:SetPoint( 'TOP', plateFrame, 'TOP', 0, 0 )
+		UnitFrame:SetPoint( 'BOTTOM', plateFrame, 'BOTTOM', 0, db.plateOffsetY or 6 )
+		UnitFrame:SetWidth( (db.healthBarWidth or 136)  + cfgPlatesAdjustW )
+		-- healthBar
+		local healthBar = UnitFrame.healthBar
+		local anchorFrame = UnitFrame.castBar or UnitFrame
+		local gap = db.castBarGap or (isClassic and 0) or nil
+		if gap ~= UnitFrame.castBarGap then
+			-- in classic we execute this code if gap is not defined to reanchor healthBar the "(isClassic and 0)" above forces to execute this code
+			-- in retail is not necessary because healthBar is already anchored to castBar with "correct" point values
+			healthBar:ClearAllPoints()
+			healthBar:SetPoint('BOTTOMLEFT', anchorFrame, 'TOPLEFT',  0,  gap or 0 )
+			healthBar:SetPoint('BOTTOMRIGHT',anchorFrame, 'TOPRIGHT', 0,  gap or 0 )
+			UnitFrame.castBarGap = gap
 		end
-		if Reskin then
-			local update = WidgetUpdate[db]
-			-- save skin & update stuff
-			UnitFrame.__skin = db
-			UnitFrame.__update = update
-			-- skin widgets
-			local frameAnchor = UnitFrame.healthBar
-			for i=1,#WidgetNames do
-				local widgetName = WidgetNames[i]
-				SkinMethods[widgetName]( UnitFrame, frameAnchor, db, update[widgetName] )
+		healthBar:SetShown( db.kHealthBar_enabled )
+		healthBar:SetHeight( db.healthBarHeight or 12 )
+		-- castBar
+		local castBar = UnitFrame.kkCastBar
+		if castBar then
+			castBar:SetHeight( db.castBarHeight or 10 )	-- SetHeight() is called for disabled castBars, wrong but necessary in retail because healthbar is anchored to the castbar
+			if not isClassic then
+				castBar.Text:SetFont( FontCache[db.castBarFontFile or 'Roboto Condensed Bold'], db.castBarFontSize or 8, db.castBarFontFlags or 'OUTLINE' )
 			end
-			-- update widgets values & color
-			UpdatePlateValues(UnitFrame)
-			UpdatePlateColors(UnitFrame)
-			-- notify that a plate has been skinned to other modules
-			addon:SendMessage('PLATE_SKINNED',UnitFrame, db)
-			return true
-		elseif UnitAdded then
-			-- update widgets values & color
-			UpdatePlateValues(UnitFrame)
-			UpdatePlateColors(UnitFrame)
+			if db.kCastBar_enabled and not ((UnitFrame.__reaction=='friendly')==db.castBarHiddenFriendly) then
+				CastingBarFrame_SetUnit(castBar, UnitFrame.unit, false, true)
+			else
+				CastingBarFrame_SetUnit(castBar, nil)
+			end
 		end
 	end
-
+	if Reskin then
+		local update = WidgetUpdate[db]
+		-- save skin & update stuff
+		UnitFrame.__skin = db
+		UnitFrame.__update = update
+		-- skin widgets
+		local frameAnchor = UnitFrame.healthBar
+		for i=1,#WidgetNames do
+			local widgetName = WidgetNames[i]
+			SkinMethods[widgetName]( UnitFrame, frameAnchor, db, update[widgetName] )
+		end
+		-- update widgets values & color
+		UpdatePlateValues(UnitFrame)
+		UpdatePlateColors(UnitFrame)
+		-- notify that a plate has been skinned to other modules
+		addon:SendMessage('PLATE_SKINNED',UnitFrame, db)
+		return true
+	elseif UnitAdded then
+		-- update widgets values & color
+		UpdatePlateValues(UnitFrame)
+		UpdatePlateColors(UnitFrame)
+	end
 end
 
 ----------------------------------------------------------------
@@ -1069,89 +593,6 @@ do
 	end	)
 	function UpdateCombatTracking(enabled)
 		timer:SetPlaying(not not enabled)
-	end
-end
-
-----------------------------------------------------------------
--- Attackers widget update
-----------------------------------------------------------------
-
-local UpdateAttackersTracking
-do
-	local masks = {}
-	local bits  = { TANK = 8, HEALER = 16 }
-	local units = { 'party1', 'party2', 'party3','party4', party1 = 'party1target', party2 = 'party2target', party3 = 'party3target', party4 = 'party4target' }
-	local timer = CreateTimer(.2, function()
-		if IsInRaid() then return end
-		wipe(masks)
-		for i=GetNumSubgroupMembers(),1,-1 do
-			local unit = units[i]
-			local guid = UnitGUID( units[unit] ) -- target guid
-			if guid and NamePlatesByGUID[guid] then
-				local role = UnitGroupRolesAssigned(unit)
-				local mask = masks[guid] or 0
-				local bit  = bits[role]
-				masks[guid] = bit and (bor(mask,bit)+1) or (mask+1)
-			end
-		end
-		local Update = WidgetMethods.kAttackers
-		for plateFrame, UnitFrame in pairs(NamePlates) do
-			local kAttackers = UnitFrame.kAttackers
-			if kAttackers then
-				local mask = masks[UnitFrame.__guid] or 0
-				if mask~=UnitFrame.__attackers then
-					UnitFrame.__attackers = mask
-					Update(UnitFrame)
-				end
-			end
-		end
-	end )
-	function UpdateAttackersTracking(enabled)
-		if not enabled ~= not timer:IsPlaying() then
-			timer:SetPlaying(not not enabled)
-			if not enabled then
-				for plateFrame, UnitFrame in pairs(NamePlates) do
-					UnitFrame.__attackers = 0
-				end
-			end
-		end
-	end
-end
-
-----------------------------------------------------------------
--- Attackers widget update
-----------------------------------------------------------------
-
-local UpdateTargetClassTracking
-do
-	local timer = CreateTimer(.1, function()
-		if IsInRaid() then return end
-		for plateFrame, UnitFrame in pairs(NamePlates) do
-			local kTargetClass = UnitFrame.kTargetClass
-			if kTargetClass then
-				local unit = target[UnitFrame.unit]
-				local guid = UnitGUID(unit)
-				if guid ~= kTargetClass.displayedGUID then
-					if guid and UnitIsPlayer(unit) and not UnitIsUnit(unit,'player') then
-						local _, class = UnitClass(unit)
-						kTargetClass:SetTexCoord( unpack(ClassTexturesCoord[class or 0] or CoordEmpty) )
-					else
-						kTargetClass:SetTexCoord( 0,0,0,0 )
-					end
-					kTargetClass.displayedGUID = guid
-				end
-			end
-		end
-	end )
-	function UpdateTargetClassTracking(enabled)
-		if not enabled ~= not timer:IsPlaying() then
-			timer:SetPlaying(not not enabled)
-			if not enabled then
-				for plateFrame, UnitFrame in pairs(NamePlates) do
-					UnitFrame.__attackers = 0
-				end
-			end
-		end
 	end
 end
 
@@ -1288,19 +729,10 @@ end
 -- Nameplate created event
 ----------------------------------------------------------------
 
+local CreateMethods = {}
+
 local CreateNamePlate
 do
-	local CreateMethods = {
-		kCastBar      = CreateCastBar,
-		kHealthBar    = CreateHealthBar,
-		kHealthBorder = CreateHealthBorder,
-		kHealthText   = CreateHealthText,
-		kLevelText    = CreateLevelText,
-		kNameText     = CreateNameText,
-		kIcon         = CreateIcon,
-		kAttackers    = CreateAttackers,
-		kTargetClass  = CreateTargetClass,
-	}
 	function CreateNamePlate(UnitFrame)
 		for i=1,#activeWidgets do
 			local widgetName = activeWidgets[i]
@@ -1432,32 +864,23 @@ addon.UNIT_FACTION = UNIT_FLAGS
 function addon:UNIT_CLASSIFICATION_CHANGED(unit)
 	local UnitFrame = NamePlatesByUnit[unit]
 	if UnitFrame then
-		local reskinned
 		UnitFrame.__level = UnitLevel( unit )
 		UnitFrame.__classification = UnitClassification(unit) or 'unknow'
-		if ConditionFields['@classification'] then
-			reskinned = SkinPlate( C_GetNamePlateForUnit(unit), UnitFrame )
-		end
-		if not reskinned and UnitFrame.kLevelText then
-			WidgetMethods.kLevelText(UnitFrame)
+		if not ConditionFields['@classification'] or not SkinPlate( C_GetNamePlateForUnit(unit), UnitFrame ) then
+			addon:SendMessage('UNIT_CLASSIFICATION_CHANGED', UnitFrame, unit)
 		end
 	end
 end
 
 ----------------------------------------------------------------
---kAttackers
+-- kAttackers
 ----------------------------------------------------------------
 
 function addon:GROUP_ROSTER_UPDATE()
 	local group = PlayerInParty()
-	if group ~= InGroup then
-		InGroup = group
-		if activeWidgets.kAttackers then
-			UpdateAttackersTracking(InCombat and InGroup)
-		end
-		if activeWidgets.kTargetClass then
-			UpdateTargetClassTracking(InCombat and InGroup)
-		end
+	if group ~= addon.InGroup then
+		addon.InGroup = group
+		addon:SendMessage('GROUP_TYPE_CHANGED')
 	end
 end
 
@@ -1491,7 +914,7 @@ local function UpdateVisibility()
 		local value = addon.db.general.nameplateShowFriends or 0
 		if value>=2 then
 			if value<=3 then
-				value = InCombat == (value==2)
+				value = addon.InCombat == (value==2)
 			else
 				value = not IsInInstance() == (value==5)
 			end
@@ -1503,7 +926,7 @@ local function UpdateVisibility()
 		local value = addon.db.general.nameplateShowEnemies or 0
 		if value>=2 then
 			if value<=3 then
-				value = InCombat == (value==2)
+				value = addon.InCombat == (value==2)
 			else
 				value = not IsInInstance() == (value==5)
 			end
@@ -1520,15 +943,9 @@ end
 ----------------------------------------------------------------
 
 function addon:PLAYER_REGEN_DISABLED()
-	InCombat = true
+	addon.InCombat = true
 	UpdateVisibility()
 	self:SendMessage('COMBAT_START')
-	if activeWidgets.kAttackers then
-		UpdateAttackersTracking(InGroup)
-	end
-	if activeWidgets.kTargetClass then
-		UpdateTargetClassTracking(InGroup)
-	end
 	if ConditionFields['@combat'] then
 		UpdateCombatTracking(true)
 		CombatReskinCheck(true)
@@ -1542,14 +959,8 @@ end
 ----------------------------------------------------------------
 
 function addon:PLAYER_REGEN_ENABLED()
-	InCombat = false
+	addon.InCombat = false
 	self:SendMessage('COMBAT_END')
-	if activeWidgets.kAttackers then
-		UpdateAttackersTracking(false)
-	end
-	if activeWidgets.kTargetClass then
-		UpdateTargetClassTracking(false)
-	end
 	if ConditionFields['@combat'] then
 		UpdateCombatTracking(false)
 	end
@@ -1563,8 +974,8 @@ end
 
 function addon:ZONE_CHANGED_NEW_AREA(event)
 	local _, type = IsInInstance()
-	if type ~= InstanceType then
-		InstanceType = type
+	if type ~= addon.InstanceType then
+		addon.InstanceType = type
 		UpdateVisibility()
 		if ConditionFields.instance then
 			ReskinPlates()
@@ -1577,13 +988,7 @@ end
 ----------------------------------------------------------------
 
 if addon.isClassic then
-	function addon:PLAYER_ENTERING_WORLD()
-		local distance = addon.db.general.nameplateMaxDistanceClassic
-		if distance then
-			SetCVar("nameplateMaxDistance", distance)
-		end
-		self:ZONE_CHANGED_NEW_AREA()
-	end
+	addon.PLAYER_ENTERING_WORLD = addon.ZONE_CHANGED_NEW_AREA
 else
 	addon.ZONE_CHANGED_NEW_AREA = addon.ZONE_CHANGED_NEW_AREA
 end
@@ -1654,13 +1059,13 @@ do
 		end
 	end
 	function UpdateSkinCheckFunction()
+		local cfgTestSkin = addon.cfgTestSkin
 		if cfgTestSkin then
 			GetPlateSkin = function() return addon.db.skins[cfgTestSkin] and cfgTestSkin or 1 end
 		else
 			GetPlateSkin = CompileSkinCheckFunction(addon.db.rules, addon.db.defaultSkin, ConditionFields)
 		end
 	end
-
 end
 
 ----------------------------------------------------------------
@@ -1733,8 +1138,9 @@ do
 			SetCVar("nameplateSelectedScale", 1)
 			SetCVar("nameplateMinScale", 1)
 		end
-		cfgClassicBorders = addon.__db.global.classicBorders
 		cfgTipProfessionLine = GetCVarBool('colorblindmode') and KiwiPlatesNameTooltipTextLeft3 or KiwiPlatesNameTooltipTextLeft2
+		cfgClassicBorders = addon.__db.global.classicBorders
+		addon.cfgClassicBorders = cfgClassicBorders
 	end
 
 	local function UpdateSkins()
@@ -1782,10 +1188,6 @@ do
 		UpdateEventRegister( HealthFrame, activeWidgets.kHealthText or activeStatuses.health or activeStatuses.reaction, "UNIT_MAXHEALTH", isClassic and "UNIT_HEALTH_FREQUENT" or "UNIT_HEALTH"  )
 		UpdateEventRegister( self, self.db.general.highlight or ConditionFields['@mouseover'], "UPDATE_MOUSEOVER_UNIT" )
 		UpdateEventRegister( self, activeStatuses.reaction or ConditionFields['@attackable'] or ConditionFields['@reaction'], "UNIT_FLAGS", "UNIT_TARGETABLE_CHANGED", "UNIT_FACTION" )
-		UpdateEventRegister( self, activeWidgets.kLevelText or ConditionFields['@classification'], 'UNIT_CLASSIFICATION_CHANGED' )
-		UpdateEventRegister( self, activeWidgets.kAttackers or activeWidgets.kTargetClass, "GROUP_ROSTER_UPDATE" )
-
-		UpdateAttackersTracking( activeWidgets.kAttackers and InCombat and InGroup)
 
 		-- updating modules before reskining the plates, be careful in threat/auras modules UPDATE callbacks,
 		-- do not call direct/indirect to the function SkinPlate() in these callbacks, do not use plates skin data.
@@ -1802,8 +1204,8 @@ do
 			SkinPlate(plateFrame, UnitFrame, true) -- true = Fake UNIT_ADDED to force a full update
 		end
 
-		if isClassic then
-			RealMobHealth = self.db.RealMobHealth and _G.RealMobHealth and _G.RealMobHealth.GetUnitHealth
+		if isVanilla then
+			addon.RealMobHealth = self.db.RealMobHealth and _G.RealMobHealth and _G.RealMobHealth.GetUnitHealth
 		end
 
 		UpdatePlatesOpacity()
@@ -1833,8 +1235,8 @@ end
 ----------------------------------------------------------------
 
 function addon:TestMode(skinIndex, update) -- Togle test mode or update skin to test
-	if not update or cfgTestSkin then
-		cfgTestSkin = (update or not cfgTestSkin) and skinIndex or nil
+	if not update or addon.cfgTestSkin then
+		addon.cfgTestSkin = (update or not addon.cfgTestSkin) and skinIndex or nil
 		self:Update()
 	end
 end
@@ -1844,8 +1246,9 @@ end
 ----------------------------------------------------------------
 
 addon:RegisterMessage('INITIALIZE', function()
-	InstanceType = select(2, IsInInstance())
-	InGroup = PlayerInParty()
+	addon.InstanceType = select(2, IsInInstance())
+	addon.InGroup = PlayerInParty()
+	addon.InCombat = InCombatLockdown()
 	UpdateVisibility()
 end )
 
@@ -1863,8 +1266,27 @@ addon:RegisterMessage('ENABLE', function()
 	addon:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 	addon:RegisterEvent("PLAYER_ENTERING_WORLD")
 	addon:RegisterEvent("UNIT_NAME_UPDATE")
+	addon:RegisterEvent("GROUP_ROSTER_UPDATE")
+	addon:RegisterEvent("UNIT_CLASSIFICATION_CHANGED")
 	addon:Update()
 end )
+
+----------------------------------------------------------------
+-- Widgets Register
+----------------------------------------------------------------
+
+function addon:RegisterWidget( widgetName, widget, reused )
+	WidgetRegistered[widgetName] = widget
+	WidgetNames[#WidgetNames+1]  = widgetName
+	WidgetNames[widgetName]    	 = reused and widgetName or 'k'..widgetName
+	CreateMethods[widgetName]  	 = widget.Create
+	SkinMethods[widgetName]    	 = widget.Layout
+	WidgetMethods[widgetName]  	 = widget.Update
+	ColorWidgets[widgetName]   	 = (widget.Color or widget.ColorStatus) and widget.Name or nil
+	ColorDefaults[widgetName]  	 = widget.Color
+	ColorStatusDefaults[widgetName] = widget.ColorStatus
+	addon.defaults.skins[1][widgetName..'_enabled'] = widget.Enabled
+end
 
 ----------------------------------------------------------------
 -- Publish some stuff
@@ -1874,10 +1296,13 @@ end )
 addon.CreateTimer              = CreateTimer
 addon.SetBorderTexture         = SetBorderTexture
 addon.UpdateWidgetColor        = UpdateWidgetColor
+addon.FormatNameText           = FormatNameText
 -- variables
 addon.NamePlates               = NamePlates
 addon.NamePlatesByUnit         = NamePlatesByUnit
 addon.NamePlatesByGUID         = NamePlatesByGUID
+addon.ClassTexturesCoord       = ClassTexturesCoord
+addon.CoordEmpty               = CoordEmpty
 addon.ClassColors              = ClassColors
 addon.ColorsNonOverride        = ColorsNonOverride
 addon.ColorWhite               = ColorWhite
@@ -1894,3 +1319,6 @@ addon.BorderTexturesCoord      = BorderTexturesCoord
 addon.BorderTexturesPlateSep   = BorderTexturesPlateSep
 addon.BorderTexturesCastBarSep = BorderTexturesCastBarSep
 addon.BorderTextureDefault     = BorderTextureDefault
+addon.Classifications          = Classifications
+addon.UnitGroupRolesAssigned   = UnitGroupRolesAssigned
+addon.TargetCache              = target
