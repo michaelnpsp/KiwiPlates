@@ -97,6 +97,7 @@ function Widget.Enable()
 	addon:RegisterMessage( 'GROUP_TYPE_CHANGED', Widget.UpdateTracking )
 	addon:RegisterMessage( 'COMBAT_START', Widget.UpdateTracking )
 	addon:RegisterMessage( 'COMBAT_END', Widget.UpdateTracking )
+	Widget.UpdateTracking()
 end
 
 function Widget.Disable()

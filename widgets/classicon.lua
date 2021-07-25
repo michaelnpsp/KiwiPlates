@@ -35,30 +35,33 @@ function Widget.Layout(UnitFrame, frameAnchor, db, enabled)
 end
 
 function Widget.Update(UnitFrame)
-	local skin = UnitFrame.__skin
-	if not skin.classIconUserTexture then
-		local key
-		if addon.cfgTestSkin then
-			key = UnitFrame.__type=='Player' and UnitFrame.__class or 'elite'
-		else
-			if UnitFrame.__type=='Player' then
-				if not skin.classIconDisablePlayers then
-					key = UnitFrame.__class
+	local kIcon = UnitFrame.kIcon
+	if kIcon then
+		local skin = UnitFrame.__skin
+		if not skin.classIconUserTexture then
+			local key
+			if addon.cfgTestSkin then
+				key = UnitFrame.__type=='Player' and UnitFrame.__class or 'elite'
+			else
+				if UnitFrame.__type=='Player' then
+					if not skin.classIconDisablePlayers then
+						key = UnitFrame.__class
+					end
+				elseif not skin.classIconDisableNPCs then
+					key = UnitFrame.__classification
 				end
-			elseif not skin.classIconDisableNPCs then
-				key = UnitFrame.__classification
 			end
+			kIcon:SetTexCoord( unpack(ClassTexturesCoord[key] or CoordEmpty) )
 		end
-		UnitFrame.kIcon:SetTexCoord( unpack(ClassTexturesCoord[key] or CoordEmpty) )
 	end
 end
 
 function Widget.Enable()
-	-- addon:RegisterMessage( 'UNIT_CLASSIFICATION_CHANGED', Widget.Update )
+	addon:RegisterMessage( 'UNIT_CLASSIFICATION_CHANGED', Widget.Update )
 end
 
 function Widget.Disable()
-	-- addon:UnregisteMessage( 'UNIT_CLASSIFICATION_CHANGED', Widget.Update )
+	addon:UnregisteMessage( 'UNIT_CLASSIFICATION_CHANGED', Widget.Update )
 end
 
 addon:RegisterWidget( 'kIcon', Widget )

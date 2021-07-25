@@ -66,7 +66,6 @@ local cfgHealthThreshold1
 local cfgHealthThreshold2
 local cfgClassColorReaction = {}
 local cfgClassicBorders
-local cfgTipProfessionLine
 local cfgPlatesAdjustW = isClassic and 0 or 24
 
 local NamePlates = {}
@@ -240,40 +239,6 @@ do
 	end
 end
 
-local FormatNameText
-do
-	local tip = CreateFrame('GameTooltip','KiwiPlatesNameTooltip',UIParent,'GameTooltipTemplate')
-	local pattern = strmatch(TOOLTIP_UNIT_LEVEL,'^(.-) ') -- invalid pattern
-	local strtrim = strtrim
-	local strfind = strfind
-	local UnitPVPName = UnitPVPName
-	local GetGuildInfo = GetGuildInfo
-	local UnitIsOtherPlayersPet = UnitIsOtherPlayersPet
-	local NameTags = {}
-	local function GetNPCProfession(unit)
-        tip:SetOwner(UIParent,ANCHOR_NONE)
-        tip:SetUnit(unit)
-        local text = cfgTipProfessionLine:GetText()
-	    tip:Hide()
-		return text and not strfind(text,pattern) and text or ''
-    end
-	function FormatNameText(UnitFrame, mask)
-		local unit = UnitFrame.unit
-		NameTags['$n'] = UnitFrame.__name
-		NameTags['$c'] = UnitClass(unit) or ''
-		if UnitIsPlayer(unit) then
-			NameTags['$p'] = ''
-			NameTags['$t'] = UnitPVPName(unit)
-			NameTags['$g'] = GetGuildInfo(unit) or ''
-		else
-			NameTags['$g'] = ''
-			NameTags['$t'] = UnitFrame.__name
-			NameTags['$p'] = UnitIsOtherPlayersPet(unit) and '' or GetNPCProfession(unit)
-		end
-		return strtrim(gsub(mask,"%$%l",NameTags))
-	end
-end
-
 local function PlayerInParty()
 	return not IsInRaid() and GetNumSubgroupMembers()>0
 end
@@ -368,7 +333,7 @@ local WidgetMethods = {}
 -- colors & values, example:
 -- WidgetUpdate[skin] = {
 --   -- functions to update widgets texts and statusbars
---   [1] = WidgetMethods.kHealthBar, [2] = WidgetMethods.kLevelTetx, ...
+--   [1] = WidgetMethods.kHealthBar, [2] = WidgetMethods.kLevelText, ...
 --   -- user defined colors & active widgets
 --	 ['kHealthBar'] = customColor1, ['kNameText']  = customColor2, ['ClassificationFrame'] = true, ...
 --   -- statuses
@@ -1138,7 +1103,6 @@ do
 			SetCVar("nameplateSelectedScale", 1)
 			SetCVar("nameplateMinScale", 1)
 		end
-		cfgTipProfessionLine = GetCVarBool('colorblindmode') and KiwiPlatesNameTooltipTextLeft3 or KiwiPlatesNameTooltipTextLeft2
 		cfgClassicBorders = addon.__db.global.classicBorders
 		addon.cfgClassicBorders = cfgClassicBorders
 	end
@@ -1172,6 +1136,14 @@ do
 				end
 			end
 			WidgetUpdate[skin] = update
+		end
+		for name, widget in pairs(WidgetRegistered) do
+			local enabled = not widget.enabled
+			if enabled ~= not activeWidgets[name] then
+				widget.enabled = enabled or nil
+				local func = widget[enabled and 'Enable' or 'Disable']
+				if func then func() end
+			end
 		end
 	end
 
@@ -1296,7 +1268,6 @@ end
 addon.CreateTimer              = CreateTimer
 addon.SetBorderTexture         = SetBorderTexture
 addon.UpdateWidgetColor        = UpdateWidgetColor
-addon.FormatNameText           = FormatNameText
 -- variables
 addon.NamePlates               = NamePlates
 addon.NamePlatesByUnit         = NamePlatesByUnit

@@ -82,7 +82,7 @@ function Widget.ResetAllPlates()
 end
 
 function Widget.UpdateTracking()
-	local disabled =  not (addon.InCombat and addon.InGroup)
+	local disabled = not (addon.InCombat and addon.InGroup)
 	if disabled ~= not timer:IsPlaying() then
 		timer:SetPlaying(not disabled)
 		if disabled then Widget.ResetAllPlates() end
@@ -94,7 +94,7 @@ function Widget.Enable()
 	addon:RegisterMessage( 'GROUP_TYPE_CHANGED', Widget.UpdateTracking )
 	addon:RegisterMessage( 'COMBAT_START', Widget.UpdateTracking )
 	addon:RegisterMessage( 'COMBAT_END', Widget.UpdateTracking )
-	UpdateTracking()
+	Widget.UpdateTracking()
 end
 
 function Widget.Disable()

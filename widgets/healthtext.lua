@@ -54,6 +54,7 @@ function Widget.Update(UnitFrame)
 	else
 		UnitFrame.kHealthText:SetFormattedText( '%.0f%%',p*100 )
 	end
+	return p
 end
 
 addon:RegisterWidget( 'kHealthText', Widget )

@@ -34,10 +34,13 @@ function Widget.Layout(UnitFrame, frameAnchor, db, enabled)
 end
 
 function Widget.Update(UnitFrame)
-	local level = UnitFrame.__level
-	local class = UnitFrame.__classification
-	local text  = level<0 and '??' or level .. (Classifications[class] or '')
-	UnitFrame.kLevelText:SetText( text )
+	local kLevelText =  UnitFrame.kLevelText
+	if kLevelText then
+		local level = UnitFrame.__level
+		local class = UnitFrame.__classification
+		local text  = level<0 and '??' or level .. (Classifications[class] or '')
+		kLevelText:SetText( text )
+	end
 end
 
 function Widget.Enable()
