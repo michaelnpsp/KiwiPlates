@@ -39,36 +39,24 @@ function addon.TableRemoveByValue(t,v)
 	end
 end
 
--- Repeating Timers Management
+-- repeating timers creation
 do
-	local timers = {}
-	local function SetDuration(self, duration)
-		self.animation:SetDuration(duration)
-	end
-	-- addon:CreateTimer(func, duration, play)
-	-- play=true|nil => timer running; play=false => timer paused
-	-- timer methods: timer:Play() timer:Stop() timer:SetDuration()
-	function addon:CreateTimer( func, duration, play )
-		local timer = tremove(timers)
-		if not timer then
-			timer = addon:CreateAnimationGroup()
-			timer.animation = timer:CreateAnimation()
-			timer.SetDuration = SetDuration
-			timer:SetLooping("REPEAT")
+	local function SetPlaying(self, enable)
+		if enable then
+			self:Play()
+		else
+			self:Stop()
 		end
+	end
+	addon.CreateTimer = function(delay, func)
+		local timer = addon:CreateAnimationGroup()
+		timer:CreateAnimation():SetDuration(delay)
+		timer:SetLooping("REPEAT")
 		timer:SetScript("OnLoop", func)
-		if duration then
-			timer:SetDuration(duration)
-			if play~=false then timer:Play() end
+		if not timer.SetPlaying then
+			timer.SetPlaying = SetPlaying
 		end
 		return timer
-	end
-	-- addon:CancelTimer(timer)
-	function addon:CancelTimer( timer )
-		if timer then
-			timer:Stop()
-			timers[#timers+1] = timer
-		end
 	end
 end
 

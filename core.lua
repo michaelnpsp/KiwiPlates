@@ -215,35 +215,6 @@ Media:Register("statusbar", "Blizzard Solid White", "Interface\\Buttons\\white8x
 Media:Register("statusbar", "Blizzard NamePlate", "Interface\\TargetingFrame\\UI-TargetingFrame-BarFill")
 
 ----------------------------------------------------------------
--- Utils
-----------------------------------------------------------------
-
-local CreateTimer
-do
-	local function SetPlaying(self, enable)
-		if enable then
-			self:Play()
-		else
-			self:Stop()
-		end
-	end
-	CreateTimer = function(delay, func)
-		local timer = addon:CreateAnimationGroup()
-		timer:CreateAnimation():SetDuration(delay)
-		timer:SetLooping("REPEAT")
-		timer:SetScript("OnLoop", func)
-		if not timer.SetPlaying then
-			timer.SetPlaying = SetPlaying
-		end
-		return timer
-	end
-end
-
-local function PlayerInParty()
-	return not IsInRaid() and GetNumSubgroupMembers()>0
-end
-
-----------------------------------------------------------------
 -- Statuses color painting management
 ----------------------------------------------------------------
 
@@ -546,7 +517,7 @@ end
 
 local UpdateCombatTracking
 do
-	local timer = CreateTimer(.25, function()
+	local timer = addon.CreateTimer(.25, function()
 		for plateFrame, UnitFrame in pairs(NamePlates) do
 			local unit = UnitFrame.unit
 			local combat = UnitAffectingCombat(unit) or ( UnitIsPlayer(target[unit]) and UnitIsFriend(target[unit],'player') )
@@ -567,7 +538,7 @@ end
 
 do
 	local timer
-	timer = CreateTimer(.2, function()
+	timer = addon.CreateTimer(.2, function()
 		if not (mouseFrame and (not mouseFrame.UnitFrame or UnitIsUnit('mouseover', mouseFrame.UnitFrame.unit)) ) then
 			timer:Stop()
 			addon:UPDATE_MOUSEOVER_UNIT()
@@ -842,7 +813,7 @@ end
 ----------------------------------------------------------------
 
 function addon:GROUP_ROSTER_UPDATE()
-	local group = PlayerInParty()
+	local group = not IsInRaid() and GetNumSubgroupMembers()>0
 	if group ~= addon.InGroup then
 		addon.InGroup = group
 		addon:SendMessage('GROUP_TYPE_CHANGED')
@@ -1219,7 +1190,7 @@ end
 
 addon:RegisterMessage('INITIALIZE', function()
 	addon.InstanceType = select(2, IsInInstance())
-	addon.InGroup = PlayerInParty()
+	addon.InGroup = not IsInRaid() and GetNumSubgroupMembers()>0
 	addon.InCombat = InCombatLockdown()
 	UpdateVisibility()
 end )
@@ -1265,7 +1236,6 @@ end
 ----------------------------------------------------------------
 
 -- methods
-addon.CreateTimer              = CreateTimer
 addon.SetBorderTexture         = SetBorderTexture
 addon.UpdateWidgetColor        = UpdateWidgetColor
 -- variables
