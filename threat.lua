@@ -81,6 +81,7 @@ local function CombatStart()
 			UpdatePlateThreatColor( UnitFrame, unit )
 		end
 		addon:RegisterEvent('UNIT_THREAT_LIST_UPDATE')
+		addon.ThreatColorUpdatePlate = UpdatePlateThreatColor
 	end
 end
 
@@ -99,6 +100,7 @@ local function CombatEnd()
 			end
 		end
 		addon:UnregisterEvent('UNIT_THREAT_LIST_UPDATE')
+		addon.ThreatColorUpdatePlate = nil
 	end
 end
 

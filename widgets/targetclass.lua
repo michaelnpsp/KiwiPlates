@@ -56,12 +56,15 @@ function Widget.UpdateAllPlates()
 	for plateFrame, UnitFrame in pairs(NamePlates) do
 		local kTargetClass = UnitFrame.kTargetClass
 		if kTargetClass then
-			local unit = TargetCache[UnitFrame.unit]
+			local sunit = UnitFrame.unit
+			local unit = TargetCache[sunit]
 			local guid = UnitGUID(unit)
 			if guid ~= kTargetClass.displayedGUID then
 				if guid and UnitIsPlayer(unit) and not UnitIsUnit(unit,'player') then
 					local _, class = UnitClass(unit)
 					kTargetClass:SetTexCoord( unpack(ClassTexturesCoord[class or 0] or CoordEmpty) )
+					local threatFunc = addon.ThreatColorUpdatePlate
+					if threatFunc then func(UnitFrame, sunit) end
 				else
 					kTargetClass:SetTexCoord( 0,0,0,0 )
 				end
