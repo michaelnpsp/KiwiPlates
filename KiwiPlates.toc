@@ -19,8 +19,6 @@ Libs\AceGUI-3.0-SharedMediaWidgets\widget.xml
 Libs\AceSerializer-3.0\AceSerializer-3.0.xml
 
 #@non-retail@
-# Libs\LibClassicDurations\LibClassicDurations.xml
-# Libs\LibClassicCasterino\LibClassicCasterino.lua
 castbar.lua
 castbar.xml
 auras.xml
@@ -30,27 +28,29 @@ init.lua
 tools.lua
 core.lua
 options.lua
-threat.lua
-auras.lua
-combopoints.lua
-ldb.lua
-database.lua
-expimp.lua
+
 #@retail@
-powerbar.lua
+modules\powerbar.lua
 #@end-retail@
+modules\auras.lua
+modules\threat.lua
+modules\combopoints.lua
+modules\nametext.lua
+modules\leveltext.lua
+modules\healthtext.lua
+modules\castbar.lua
+modules\healthbar.lua
+modules\healthborder.lua
+modules\raidtarget.lua
+modules\classicon.lua
+modules\attackers.lua
+modules\targetclass.lua
+
 #@non-retail@
 castbarplayer.lua
 castbartarget.lua
 #@end-non-retail@
 
-widgets\nametext.lua
-widgets\leveltext.lua
-widgets\healthtext.lua
-widgets\castbar.lua
-widgets\healthbar.lua
-widgets\healthborder.lua
-widgets\raidtarget.lua
-widgets\classicon.lua
-widgets\attackers.lua
-widgets\targetclass.lua
+ldb.lua
+database.lua
+expimp.lua
