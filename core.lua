@@ -631,6 +631,7 @@ function addon:PLAYER_TARGET_CHANGED()
 				self:SendMessage('PLAYER_TARGET_ACQUIRED', plateFrame, 'target' )
 			end
 		end
+		self:SendMessage("NAME_PLATE_TARGET_CHANGED", targetFrame)
 	end
 	if targetExists ~= UnitExists('target') then
 		targetExists = not targetExists
@@ -721,8 +722,9 @@ function addon:NAME_PLATE_UNIT_ADDED(unit)
 			UnitFrame.__classification = 'boss'
 		end
 		UnitFrame.__name = UnitName( unit )
-		UnitFrame.__target = UnitIsUnit( unit, 'target' ) or nil
-		if UnitFrame.__target then
+		local newTarget = UnitIsUnit( unit, 'target' ) or nil
+		UnitFrame.__target = newTarget
+		if newTarget then
 			if targetFrame and targetFrame.UnitFrame then -- unmark&reskin old target frame
 				targetFrame.UnitFrame.__target = nil
 				SkinPlate(targetFrame, targetFrame.UnitFrame)
@@ -732,6 +734,9 @@ function addon:NAME_PLATE_UNIT_ADDED(unit)
 		SkinPlate( plateFrame, UnitFrame, true )
 		UnitFrame.healthBar.UnitFrame = UnitFrame -- see FixHealthBarSize()
 		self:SendMessage("NAME_PLATE_UNIT_ADDED", UnitFrame, unit)
+		if newTarget then
+			self:SendMessage("NAME_PLATE_TARGET_CHANGED", targetFrame)
+		end
 	end
 end
 
@@ -744,12 +749,14 @@ function addon:NAME_PLATE_UNIT_REMOVED(unit)
 	if UnitIsUnit(unit,'player') then return PersonalBarRemoved(plateFrame) end
 	local UnitFrame = plateFrame.UnitFrame or NamePlates[plateFrame]
 	if UnitFrame then
+		local targetCleared
 		UnitFrame.healthBar.UnitFrame = nil -- see FixHealthBarSize()
 		UnitFrame.__threat = nil
 		UnitFrame.__target = nil
 		UnitFrame.__mouseover = nil
 		if plateFrame == targetFrame then
 			targetFrame = nil
+			targetCleared = true
 		end
 		if plateFrame == mouseFrame then
 			mouseFrame = nil
@@ -765,6 +772,9 @@ function addon:NAME_PLATE_UNIT_REMOVED(unit)
 		NamePlatesByUnit[unit] = nil
 		NamePlatesByGUID[UnitFrame.__guid or 0] = nil
 		self:SendMessage("NAME_PLATE_UNIT_REMOVED", UnitFrame, unit)
+		if targetCleared then
+			self:SendMessage("NAME_PLATE_TARGET_CHANGED")
+		end
 	end
 end
 

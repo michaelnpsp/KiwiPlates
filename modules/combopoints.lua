@@ -26,25 +26,13 @@ texture:SetTexCoord(0,0,0,0)
 
 --
 local frameParent
-local cfgAttachToScreen
+local flagAttachToScreen
 local flagCastBarAdjusted
 
 -- return UnitFrame of target Plate
-local function GetTargetUnitFrame(UnitFrame)
-	if UnitFrame==nil then
-		local plateFrame = C_GetNamePlateForUnit('target')
-		return plateFrame and plateFrame.UnitFrame
-	end
-	return UnitFrame
-end
-
--- detach&hide combo points frame
-local function FrameHide()
-	frame:Hide()
-	frame:SetParent(nil)
-	frame:ClearAllPoints()
-	frame.UnitFrame = nil
-	frameParent = nil
+local function GetTargetUnitFrame()
+	local plateFrame = C_GetNamePlateForUnit('target')
+	return plateFrame and plateFrame.UnitFrame
 end
 
 -- update combo points
@@ -79,9 +67,16 @@ do
 	end
 end
 
+-- power update events
+frame:SetScript('OnEvent', function(self, _, _, powerType)
+	if powerType==POWER_TSTR and frame:IsVisible() then
+		Update()
+	end
+end)
+
 -- attach combo points frame to target nameplate
 local function Attach2Plate(UnitFrame)
-	UnitFrame = (cfgAttachToScreen~=true) and GetTargetUnitFrame(UnitFrame)
+	UnitFrame = UnitFrame or GetTargetUnitFrame()
 	if UnitFrame then
 		local castBar = UnitFrame.kkCastBar
 		local db = addon.db.combo
@@ -115,46 +110,35 @@ local function Attach2Screen()
 	Update()
 end
 
--- detach combo points frame from target plate
+-- detach&hide combo points frame
 local function Detach()
-	if cfgAttachToScreen==nil then
-		FrameHide()
-	elseif cfgAttachToScreen==false  then -- false: attach to screen only if there is no target nameplate
-		Attach2Screen()
-	end
+	frame:Hide()
+	frame:SetParent(nil)
+	frame:ClearAllPoints()
+	frame.UnitFrame = nil
+	frameParent = nil
 end
 
--- power update events
-frame:SetScript('OnEvent', function(self, _, _, powerType)
-	if powerType==POWER_TSTR and frame:IsVisible() then
-		Update()
-	end
-end)
-
--- target changed message
-local function TargetChanged(plateFrame)
+-- event, when target nameplate changes
+local function NamePlateTargetChanged(plateFrame)
 	if plateFrame then
 		Attach2Plate(plateFrame.UnitFrame)
-	elseif frame:IsShown() then
-		Detach()
-	end
-end
-
-local function NamePlateAdded(UnitFrame)
-	if UnitFrame.__target then
-		Attach2Plate(UnitFrame)
-	elseif UnitFrame==frame.UnitFrame then
-		Detach()
-	end
-end
-
--- only used when cfgAttachToScreen==false => combo points attached to screen if no target nameplate visible
-local function NamePlateRemoved(UnitFrame)
-	if UnitFrame==frame.UnitFrame then
+	elseif flagAttachToScreen then -- attach to screen only if there is no target nameplate
 		Attach2Screen()
+	elseif frame:IsShown() then -- never attach to screen, hide instead
+		Detach()
 	end
 end
 
+-- event, only when combo frame position must be adjusted due to castbar
+local function NamePlateCreated(UnitFrame)
+	local castBar = UnitFrame.kkCastBar
+	if castBar and not castBar.__comboParent then
+		castBar.__comboParent = UnitFrame.healthBar or UnitFrame
+	end
+end
+
+-- hook, combo frame adjust due to castbar
 local function AdjustComboFrame(castBar, event)
 	if frameParent and castBar.__comboParent == frameParent then
 		local visible = castBar.casting or castBar.channeling
@@ -168,23 +152,13 @@ local function AdjustComboFrame(castBar, event)
 	end
 end
 
-local function NamePlateCreated(UnitFrame)
-	local castBar = UnitFrame.kkCastBar
-	if castBar and not castBar.__comboParent then
-		castBar.__comboParent = UnitFrame.healthBar or UnitFrame
-	end
-end
-
+-- initial positioning
 local function InitFrame()
-	cfgAttachToScreen = addon.db.combo.attachToScreen
-	if cfgAttachToScreen==true then -- always attached to screen
+	flagAttachToScreen = (addon.db.combo.attachToScreen==false)  -- nil:attach to target plate/false:attach to target plate or screen/true:attach to screen
+	if addon.db.combo.attachToScreen==true then
 		Attach2Screen()
-	elseif not Attach2Plate() then
-		if cfgAttachToScreen==false then -- attached to screen if no target nameplate
-			Attach2Screen()
-		else -- nil: only attached to target nameplate
-			FrameHide()
-		end
+	else
+		NamePlateTargetChanged( GetTargetUnitFrame() )
 	end
 end
 
@@ -192,13 +166,12 @@ end
 addon:RegisterMessage('UPDATE', function()
 	if addon.db.combo.enabled then
 		InitFrame()
-		addon:RegisterMessage('PLAYER_TARGET_CHANGED', TargetChanged)
-		addon:RegisterMessage('NAME_PLATE_UNIT_ADDED', NamePlateAdded)
 		frame:RegisterUnitEvent('UNIT_MAXPOWER','player')
         frame:RegisterUnitEvent('UNIT_POWER_FREQUENT','player')
 		frame:RegisterUnitEvent('UNIT_DISPLAYPOWER','player')
-		if cfgAttachToScreen==false then
-			addon:RegisterMessage('NAME_PLATE_UNIT_REMOVED', NamePlateRemoved)
+		addon:RegisterMessage('PLAYER_TARGET_CHANGED', Update)
+		if addon.db.combo.attachToScreen~=true then
+			addon:RegisterMessage('NAME_PLATE_TARGET_CHANGED', NamePlateTargetChanged)
 		end
 		if addon.db.combo.castBarAdjust then
 			addon:RegisterMessage('NAME_PLATE_CREATED', NamePlateCreated)
@@ -207,13 +180,12 @@ addon:RegisterMessage('UPDATE', function()
 			end
 		end
 	else
-		addon:UnregisterMessage('PLAYER_TARGET_CHANGED', TargetChanged)
-		addon:UnregisterMessage('NAME_PLATE_UNIT_ADDED', NamePlateAdded)
-		addon:UnregisterMessage('NAME_PLATE_CREATED', NamePlateCreated)
-		addon:UnregisterMessage('NAME_PLATE_UNIT_REMOVED', NamePlateRemoved)
 		frame:UnregisterEvent('UNIT_MAXPOWER')
         frame:UnregisterEvent('UNIT_POWER_FREQUENT')
         frame:UnregisterEvent('UNIT_DISPLAYPOWER')
+		addon:UnregisterMessage('PLAYER_TARGET_CHANGED', Update)
+		addon:UnregisterMessage('NAME_PLATE_TARGET_CHANGED', NamePlateTargetChanged)
+		addon:UnregisterMessage('NAME_PLATE_CREATED', NamePlateCreated)
 	end
 end )
 
