@@ -4,12 +4,13 @@
 
 local addon = KiwiPlates
 
+local C_GetNamePlateForUnit = C_NamePlate.GetNamePlateForUnit
+
 local apiHasDurations = not addon.isVanilla
 local apiHasBuffs     = not addon.isClassic
 local CreateFrame = CreateFrame
 local UnitReaction = UnitReaction
 local format = string.format
-
 
 addon.defaults.auras = { enabled = "custom", buffsCentered = true }
 
@@ -18,6 +19,9 @@ local buffsCentered
 local buffsGlobalList
 local buffsGlobalSpecial
 local buffsDisplayStealable
+
+local ExtraUnits = {}
+local targetUnitFrame = CreateFrame('Frame')
 
 local function HideBlizzBuffFrame(self)
 	if hideBlizzard then
@@ -88,7 +92,6 @@ do -- UNIT_AURA event
 	local UnitIsUnit = UnitIsUnit
 	local UnitReaction = UnitReaction
 	local CooldownFrame_Set = CooldownFrame_Set
-	local C_GetNamePlateForUnit = C_NamePlate.GetNamePlateForUnit
 	local db, buffFrame, buffList, buffIndex
 	local name, texture, count, duration, expiration, isBuf, isSteal, _
 	local buffsWidth, buffsHeight, buffsSpacing
@@ -136,7 +139,7 @@ do -- UNIT_AURA event
 	end
 
 	function addon.UNIT_AURA(_,unit)
-		local UnitFrame = NamePlatesByUnit[unit]
+		local UnitFrame = NamePlatesByUnit[unit] or ExtraUnits[unit]
 		if not UnitFrame then return end
 		db = UnitFrame.__skin
 
@@ -192,7 +195,46 @@ do -- UNIT_AURA event
 			buffFrame:SetWidth( buffIndex*(buffsWidth+buffsSpacing)-buffsSpacing )
 		end
 
-		if apiHasBuffs then UnitFrame.BuffFrame:Hide() end
+		if apiHasBuffs then
+			local BuffFrame = UnitFrame.BuffFrame
+			if BuffFrame then BuffFrame:Hide() end
+		end
+	end
+end
+
+-- target unit frame management
+
+local function UpdateTargetVisibility(plateFrame)
+	targetUnitFrame:SetShown( not plateFrame )
+end
+
+local function UpdateTargetUnitFrame()
+	-- extra auras target unit frame
+	local enabled = addon.db.auras.enabled=='custom' and addon.db.auras.targetEnabled
+	if enabled then
+		ExtraUnits.target = targetUnitFrame
+		targetUnitFrame.__skin = addon.db.auras
+		targetUnitFrame:SetParent(UIParent)
+		targetUnitFrame:SetPoint('CENTER',0,0)
+		targetUnitFrame:SetSize(1,1)
+		targetUnitFrame.healthBar = targetUnitFrame
+		LayoutAuras(targetUnitFrame, targetUnitFrame.__skin)
+		addon:RegisterMessage('PLAYER_TARGET_CHANGED', addon.UNIT_AURA)
+		if enabled==1 then
+			targetUnitFrame:Show()
+		else
+			addon:RegisterMessage('NAME_PLATE_TARGET_CHANGED', UpdateTargetVisibility )
+			UpdateTargetVisibility( C_GetNamePlateForUnit('target') )
+		end
+		addon.UNIT_AURA(nil,'target')
+	else
+		ExtraUnits.target = nil
+		targetUnitFrame.__skin = nil
+		targetUnitFrame:SetParent(nil)
+		targetUnitFrame:ClearAllPoints()
+		targetUnitFrame:Hide()
+		addon:UnregisterMessage('PLAYER_TARGET_CHANGED', addon.UNIT_AURA)
+		addon:UnregisterMessage('NAME_PLATE_TARGET_CHANGED', UpdateTargetVisibility )
 	end
 end
 
@@ -234,18 +276,23 @@ addon:RegisterMessage('UPDATE', function()
 	buffsDisplayStealable = addon.db.auras.buffsDisplayStealable
 	buffsGlobalList    = addon.db.auras.buffsNames or {}
 	buffsGlobalSpecial = addon.db.auras.buffsSpecial
+	UpdateTargetUnitFrame()
 end )
 
 --=============================================================================
 -- configuration options
 --=============================================================================
 
-addon:SetupOptions( 'Skins/Settings', 'Auras', {
-	buffsEnabled = {
+local function aurasDisabled()
+	return addon.db.auras.enabled~='custom'
+end
+
+
+local ENABLED = {
 		type = 'select',
 		order = 0.1,
-		width = 'normal',
-		name = 'Auras Behaviour',
+		width = 'full',
+		name = 'Auras Display Behaviour',
 		get = function()
 			local v = addon.db.auras.enabled
 			return (v=='blizzard' and 1) or (v=='custom' and 2) or 3
@@ -256,16 +303,10 @@ addon:SetupOptions( 'Skins/Settings', 'Auras', {
 		end,
 		values = { addon.FormatTitle('Blizzard Default'), addon.FormatTitle('User Defined'), addon.FormatTitle('Hide Auras') },
 		confirm = function() return "An UI Reload is required to change this option. Are you sure ?" end,
-	},
-	buffsSpacing =  {
-		type = 'range', order = 0.2, name = 'Auras Spacing', min = 0, softMax = 32, step = 1,
-		get = function() return addon:GetSkin().buffsSpacing or 2 end,
-		set = function(info,value)
-			addon:GetSkin().buffsSpacing = value
-			addon:Update()
-		end,
-		disabled = function() return not addon.db.auras.enabled end,
-	},
+}
+
+
+local NAMEPLATES = {
 	buffsOffsetX =  {
 		type = 'range', order = 1, name = 'X Adjust', softMin = -64, softMax = 64, step = 1,
 		get = function() return addon:GetSkin().buffsOffsetX or 0 end,
@@ -273,7 +314,6 @@ addon:SetupOptions( 'Skins/Settings', 'Auras', {
 			addon:GetSkin().buffsOffsetX = value~=0 and value or nil
 			addon:Update()
 		end,
-		disabled = function() return not addon.db.auras.enabled end,
 	},
 	buffsOffsetY =  {
 		type = 'range', order = 2, name = 'Y Adjust', softMin = -64, softMax = 64, step = 1,
@@ -282,7 +322,6 @@ addon:SetupOptions( 'Skins/Settings', 'Auras', {
 			addon:GetSkin().buffsOffsetY = value
 			addon:Update()
 		end,
-		disabled = function() return not addon.db.auras.enabled end,
 	},
 	buffsWidth = {
 		type = 'range', order = 3, name = 'Aura Width', min = 0, softMax = 64, step = 1,
@@ -291,7 +330,6 @@ addon:SetupOptions( 'Skins/Settings', 'Auras', {
 			addon:GetSkin().buffsWidth = value
 			addon:Update()
 		end,
-		disabled = function() return not addon.db.auras.enabled end,
 	},
 	buffsHeight =  {
 		type = 'range', order = 4, name = 'Aura Height', min = 1, softMax = 64, step = 1,
@@ -300,11 +338,18 @@ addon:SetupOptions( 'Skins/Settings', 'Auras', {
 			addon:GetSkin().buffsHeight = value
 			addon:Update()
 		end,
-		disabled = function() return not addon.db.auras.enabled end,
+	},
+	buffsSpacing =  {
+		type = 'range', order = 5, name = 'Auras Spacing', min = 0, softMax = 32, step = 1,
+		get = function() return addon:GetSkin().buffsSpacing or 2 end,
+		set = function(info,value)
+			addon:GetSkin().buffsSpacing = value
+			addon:Update()
+		end,
 	},
 	buffsCentered = {
 		type = "toggle",
-		order = 90, width = "normal",
+		order = 6, width = "normal",
 		name = "Centered Auras",
 		desc = "Horizontal Center Buffs&Debuffs.",
 		get = function() return addon.db.auras.buffsCentered end,
@@ -312,11 +357,10 @@ addon:SetupOptions( 'Skins/Settings', 'Auras', {
 			addon.db.auras.buffsCentered = value
 			addon:Update()
 		end,
-		disabled = function() return not addon.db.auras.enabled end,
 	},
 	buffsDisplayStealable = {
 		type = "toggle",
-		order = 90, width = "normal",
+		order = 7, width = "normal",
 		name = "Display Stealable Buffs",
 		desc = "Display stealable buffs first highlighted with a green border (only for enemies).",
 		get = function() return addon.db.auras.buffsDisplayStealable end,
@@ -324,8 +368,83 @@ addon:SetupOptions( 'Skins/Settings', 'Auras', {
 			addon.db.auras.buffsDisplayStealable = value or nil
 			addon:Update()
 		end,
-		disabled = function() return not addon.db.auras.enabled end,
 	},
+}
+
+--=============================================================================
+
+local TARGET = {
+	targetEnabled = {
+		type = 'select',
+		order = 0.1,
+		width = 'double',
+		name = 'Display Extra Auras Frame for Target',
+		get = function()
+			return addon.db.auras.targetEnabled or 3
+		end,
+		set = function(info, v)
+			addon.db.auras.targetEnabled = v~=3 and v or nil
+			ReloadUI()
+		end,
+		values = { addon.FormatTitle('Always Enabled'), addon.FormatTitle('Enabled only when target nameplate is not visible'), addon.FormatTitle('Always Disabled') },
+		confirm = function() return "An UI Reload is required to change this option. Are you sure ?" end,
+	},
+	buffsOffsetX =  {
+		type = 'range', order = 1, name = 'X Position', softMin = -512, softMax = 512, step = 1,
+		get = function() return addon.db.auras.buffsOffsetX or 0 end,
+		set = function(info,value)
+			addon.db.auras.buffsOffsetX = value~=0 and value or nil
+			addon:Update()
+		end,
+	},
+	buffsOffsetY =  {
+		type = 'range', order = 2, name = 'Y Position', softMin = -512, softMax = 512, step = 1,
+		get = function() return addon.db.auras.buffsOffsetY or 14 end,
+		set = function(info,value)
+			addon.db.auras.buffsOffsetY = value
+			addon:Update()
+		end,
+	},
+	buffsWidth = {
+		type = 'range', order = 3, name = 'Aura Width', min = 0, softMax = 64, step = 1,
+		get = function() return addon.db.auras.buffsWidth or 26 end,
+		set = function(info,value)
+			addon.db.auras.buffsWidth = value
+			addon:Update()
+		end,
+	},
+	buffsHeight =  {
+		type = 'range', order = 4, name = 'Aura Height', min = 1, softMax = 64, step = 1,
+		get = function() return addon.db.auras.buffsHeight or 20 end,
+		set = function(info,value)
+			addon.db.auras.buffsHeight = value
+			addon:Update()
+		end,
+	},
+	buffsSpacing =  {
+		type = 'range', order = 5, name = 'Auras Spacing', min = 0, softMax = 32, step = 1,
+		get = function() return addon.db.auras.buffsSpacing or 2 end,
+		set = function(info,value)
+			addon.db.auras.buffsSpacing = value
+			addon:Update()
+		end,
+	},
+	buffsCentered = {
+		type = "toggle",
+		order = 6, width = "normal",
+		name = "Centered Auras",
+		desc = "Horizontal Center Buffs&Debuffs.",
+		get = function() return addon.db.auras.buffsCentered end,
+		set = function (_, value)
+			addon.db.auras.buffsCentered = value
+			addon:Update()
+		end,
+	},
+}
+
+--=============================================================================
+
+local DEBUFFS = {
 	buffsBlackList = {
 		type = 'select',
 		order = 100,
@@ -340,7 +459,6 @@ addon:SetupOptions( 'Skins/Settings', 'Auras', {
 			addon:Update()
 		end,
 		values = { 'BlackList', 'WhiteList' },
-		disabled = function() return not addon.db.auras.enabled end,
 	},
 	buffsPrivateList = {
 		type = "toggle",
@@ -355,7 +473,6 @@ addon:SetupOptions( 'Skins/Settings', 'Auras', {
 			db.buffsSpecialStr = value and "" or nil
 			db.buffsSpecial    = nil
 		end,
-		disabled = function() return not addon.db.auras.enabled end,
 		confirm = function(_, value)
 			return (not value) and "Current buffs/debuffs lists will be erased and the global lists will be used. Are you Sure ?" or nil
 		end
@@ -364,7 +481,7 @@ addon:SetupOptions( 'Skins/Settings', 'Auras', {
 		type = 'input',
 		order = 102,
 		name = function() return addon:GetSkin().buffsIsWhiteList and 'Debuffs (WhiteList)' or 'Debuffs (BlackList)' end,
-		multiline = 7,
+		multiline = 15,
 		width = 'full',
 		get = function(info)
 			return addon:GetSkin().buffsNamesStr or addon.db.auras.buffsNamesStr
@@ -381,14 +498,18 @@ addon:SetupOptions( 'Skins/Settings', 'Auras', {
 			db.buffsNamesStr = value
 			addon:Update()
 		end,
-		disabled = function() return not addon.db.auras.enabled end,
 	},
+}
+
+--=============================================================================
+
+local BUFFS = {
 	buffsSpecialNames = {
 		type = 'input',
 		order = 103,
 		name = 'Buffs (WhiteList)',
 		desc = 'Buffs on enemy players to be displayed and highlighted, this is always a whitelist.',
-		multiline = 5,
+		multiline = 18,
 		width = 'full',
 		get = function(info)
 			return addon:GetSkin().buffsSpecialStr or addon.db.auras.buffsSpecialStr
@@ -405,6 +526,15 @@ addon:SetupOptions( 'Skins/Settings', 'Auras', {
 			db.buffsSpecialStr = #list>0 and value or ""
 			addon:Update()
 		end,
-		disabled = function() return not addon.db.auras.enabled end,
 	},
+}
+
+addon:SetupOptions( 'Skins/Settings', 'Auras', {
+	Enabled    = ENABLED,
+	Nameplates = { type = "group", order = 14, name = 'Nameplates', args = NAMEPLATES, disabled = aurasDisabled },
+	Target     = { type = "group", order = 20, name = 'Target',     args = TARGET ,    disabled = aurasDisabled },
+	Debuffs    = { type = "group", order = 30, name = 'Debuffs',    args = DEBUFFS,    disabled = aurasDisabled },
+	Buffs      = { type = "group", order = 40, name = 'Buffs',      args = BUFFS  ,    disabled = aurasDisabled },
+}, nil, {
+	childGroups = 'tab',
 } )

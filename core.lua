@@ -639,7 +639,7 @@ function addon:PLAYER_TARGET_CHANGED()
 			UpdatePlatesOpacity()
 		end
 	end
-	self:SendMessage('PLAYER_TARGET_CHANGED', plateFrame)
+	self:SendMessage('PLAYER_TARGET_CHANGED', plateFrame, 'target')
 end
 
 ----------------------------------------------------------------
