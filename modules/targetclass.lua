@@ -64,7 +64,7 @@ function Widget.UpdateAllPlates()
 					local _, class = UnitClass(unit)
 					kTargetClass:SetTexCoord( unpack(ClassTexturesCoord[class or 0] or CoordEmpty) )
 					local threatFunc = addon.ThreatColorUpdatePlate
-					if threatFunc then threatFunc(UnitFrame, sunit) end
+					if threatFunc then threatFunc(UnitFrame, sunit, true) end
 				else
 					kTargetClass:SetTexCoord( 0,0,0,0 )
 				end

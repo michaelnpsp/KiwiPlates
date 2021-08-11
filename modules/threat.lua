@@ -6,11 +6,13 @@ local addon = KiwiPlates
 local next = next
 local pairs = pairs
 local unpack = unpack
+local abs = math.abs
 local UnitName = UnitName
 local UnitIsUnit = UnitIsUnit
 local UnitIsFriend = UnitIsFriend
 local UnitAffectingCombat = UnitAffectingCombat
 local UnitThreatSituation = UnitThreatSituation
+local UnitDetailedThreatSituation = UnitDetailedThreatSituation
 local UnitGroupRolesAssigned = UnitGroupRolesAssigned or addon.GetCustomDungeonRole
 local GetSpecialization = GetSpecialization or function() end
 local GetSpecializationRole = GetSpecializationRole or function() return addon.db.threat.playerRole end
@@ -30,31 +32,37 @@ addon.defaults.threat = {
 	colorsOther = {	[0] = { .85,1,0 }, [1] = { .35,1,0 }, [2] = { 1,.4,0 }, [3] = { 1,0,0 }, },
 }
 
---- classic & retail stuff
+local lowThreatThreshold = 2000*100
 
-local function UpdatePlateThreatColor(UnitFrame, unit)
+-- blizzard threat api is very slow, noTanking is used by targetclass widget to early notify changes in nameplate target
+-- so the tank probably is not longer tanking the unit even if the threat api did not notify the change yet.
+local function UpdatePlateThreatColor(UnitFrame, unit, noTanking)
 	if inCombat and UnitFrame.__type ~= 'Player' and not UnitIsFriend('player',unit) and (ignoreCombat or UnitAffectingCombat(unit)) then
-		local threat = UnitThreatSituation( 'player', unit ) or 0  -- 2&3 = tanked
-		if threat<2 then
-			threat = 0 -- not tanked
-			local target = unitTarget[unit]
-			if UnitExists(target) then
-				if UnitIsUnit(target,'player') then
-					threat = 3
-				elseif UnitGroupRolesAssigned(target)=='TANK' then
-					threat = 1 -- offtanked
+		local _, threat, _, _, threatValue = UnitDetailedThreatSituation('player', unit)
+		if threat then
+			if threat<2 or noTanking==true then -- 2&3 = tanked
+				threat = 0 -- not tanked
+				local target = unitTarget[unit]
+				if UnitExists(target) then
+					if UnitIsUnit(target,'player') then
+						threat = 3
+					elseif UnitGroupRolesAssigned(target)=='TANK' then
+						threat = 1 -- offtanked
+					end
 				end
+			elseif threatValue<lowThreatThreshold then
+				threat = 2 -- insecure tanking color if threat is near 0
 			end
-		end
-		if threat ~= UnitFrame.__threat then
-			UnitFrame.__threat = threat
-			local color = threatColors[threat]
-			local r,g,b,a = unpack(color)
-			for i=#Widgets,1,-1 do
-				local widget = UnitFrame[Widgets[i]]
-				if widget then
-					widget.colorOverride = color
-					widget:SetWidgetColor(r,g,b,a)
+			if threat ~= UnitFrame.__threat then
+				UnitFrame.__threat = threat
+				local color = threatColors[threat]
+				local r,g,b,a = unpack(color)
+				for i=#Widgets,1,-1 do
+					local widget = UnitFrame[Widgets[i]]
+					if widget then
+						widget.colorOverride = color
+						widget:SetWidgetColor(r,g,b,a)
+					end
 				end
 			end
 		end
@@ -73,10 +81,16 @@ local function ResetPlateThreatColor(UnitFrame, unit)
 end
 
 local function CombatStart()
-	local spec = GetSpecializationRole(GetSpecialization() or 1)
-	if addon.db.threat.alwaysEnabled or spec == 'TANK' then
+	local specRole = GetSpecializationRole(GetSpecialization() or 1)
+	if addon.db.threat.alwaysEnabled or specRole == 'TANK' then
 		inCombat = true
-		threatColors = spec=='TANK' and addon.db.threat.colorsTank or addon.db.threat.colorsOther
+		if specRole=='TANK' then
+			threatColors = addon.db.threat.colorsTank
+			lowThreatThreshold = abs(lowThreatThreshold)
+		else
+			threatColors = addon.db.threat.colorsOther
+			lowThreatThreshold = -abs(lowThreatThreshold)
+		end
 		for unit,UnitFrame in pairs(NamePlatesByUnit) do
 			UpdatePlateThreatColor( UnitFrame, unit )
 		end
