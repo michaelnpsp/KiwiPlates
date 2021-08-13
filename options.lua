@@ -586,9 +586,11 @@ Opt_SetupOption( 'General', 'Nameplate Visibility (Target)', {
 			if value then
 				SetCVarCombat('nameplateOtherTopInset', '0.08')
 				SetCVarCombat('nameplateOtherBottomInset', '0.1')
+				SetCVarCombat('nameplateLargeTopInset','0.08')
 			else
 				SetCVarCombat('nameplateOtherTopInset', '-1')
 				SetCVarCombat('nameplateOtherBottomInset', '-1')
+				SetCVarCombat('nameplateLargeTopInset','-1')
 			end
 		end,
 	},
@@ -598,7 +600,10 @@ Opt_SetupOption( 'General', 'Nameplate Visibility (Target)', {
 		name = "Top Screen Percent",
 		isPercent = true,
 		get = function()  return math.max( tonumber(GetCVar("nameplateOtherTopInset")), 0 ); end,
-		set = function (_, value) SetCVarCombat("nameplateOtherTopInset", value>0 and value or -1) end,
+		set = function (_, value)
+			SetCVarCombat("nameplateOtherTopInset", value>0 and value or -1)
+			SetCVarCombat("nameplateLargeTopInset", value>0 and value or -1)
+		end,
 		disabled = function() return GetCVar('nameplateOtherTopInset') == '-1' and GetCVar('nameplateOtherBottomInset') == '-1' end,
 	},
 	nameplateOtherBottomInset = {
@@ -607,7 +612,10 @@ Opt_SetupOption( 'General', 'Nameplate Visibility (Target)', {
 		name = "Bottom Screen Percent",
 		isPercent = true,
 		get = function()  return math.max( tonumber(GetCVar("nameplateOtherBottomInset")), 0 ); end,
-		set = function (_, value) SetCVarCombat("nameplateOtherBottomInset", value>0 and value or -1) end,
+		set = function (_, value)
+			SetCVarCombat("nameplateOtherBottomInset", value>0 and value or -1)
+			SetCVarCombat("nameplateLargeBottomInset", value>0 and value or -1)
+		end,
 		disabled = function() return GetCVar('nameplateOtherTopInset') == '-1' and GetCVar('nameplateOtherBottomInset') == '-1' end,
 	},
 } )
