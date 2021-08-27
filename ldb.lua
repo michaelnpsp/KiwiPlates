@@ -20,7 +20,7 @@ local LDB = DataBroker:NewDataObject("KiwiPlates", {
 		end
 	end,
 	OnTooltipShow = function(tooltip)
-		tooltip:AddLine("|cFF7FFF72Kiwi Plates|r")
+		tooltip:AddDoubleLine("Kiwi Plates", addon.versionToc, 0.5, 1, 0.45 )
 		tooltip:AddLine("|cFFff4040Left Click|r to open configuration\n|cFFff4040Right Click|r to open menu", 0.2, 1, 0.2)
 	end,
 } )
