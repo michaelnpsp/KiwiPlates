@@ -37,13 +37,8 @@ end
 
 function Widget.Update(UnitFrame)
 	local unit = UnitFrame.unit
-	local h,m
-	if addon.RealMobHealth then
-		h,m = addon.RealMobHealth(unit)
-	else
-		h = UnitHealth(unit)
-		m = UnitHealthMax(unit)
-	end
+	local h = UnitHealth(unit)
+	local m = UnitHealthMax(unit)
 	local p = h/m
 	local mask = UnitFrame.__skin.healthMaskValue -- mask = something like "$h/$m|$p%"
 	if mask then

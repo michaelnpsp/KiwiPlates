@@ -1,4 +1,4 @@
--- CastBar management for WoW classic
+-- CastBar management for WoW vanilla
 if select(4, GetBuildInfo())>=20000 then return end
 
 local LibCC = LibStub("LibClassicCasterino")
@@ -54,14 +54,6 @@ do
 	end
 
 	function RegisterCallback(self, unit)
-		if not next(object_to_unit) then
-			LibCC.RegisterCallback("KiwiPlatesCast","UNIT_SPELLCAST_START", CastEvent)
-			LibCC.RegisterCallback("KiwiPlatesCast","UNIT_SPELLCAST_STOP", CastEvent)
-			LibCC.RegisterCallback("KiwiPlatesCast","UNIT_SPELLCAST_FAILED", CastEvent)
-			LibCC.RegisterCallback("KiwiPlatesCast","UNIT_SPELLCAST_INTERRUPTED", CastEvent)
-			LibCC.RegisterCallback("KiwiPlatesCast","UNIT_SPELLCAST_CHANNEL_START", ChannelEvent)
-			LibCC.RegisterCallback("KiwiPlatesCast","UNIT_SPELLCAST_CHANNEL_STOP", ChannelEvent)
-		end
 		unit_to_object[unit] = self
 		object_to_unit[self] = unit
 	end
@@ -71,11 +63,15 @@ do
 		if unit then
 			object_to_unit[self] = nil
 			unit_to_object[unit] = nil
-			if not next(object_to_unit) then
-				LibCC.UnregisterAllCallbacks("KiwiPlatesCast")
-			end
 		end
 	end
+
+	LibCC.RegisterCallback("KiwiPlatesCast","UNIT_SPELLCAST_START", CastEvent)
+	LibCC.RegisterCallback("KiwiPlatesCast","UNIT_SPELLCAST_STOP", CastEvent)
+	LibCC.RegisterCallback("KiwiPlatesCast","UNIT_SPELLCAST_FAILED", CastEvent)
+	LibCC.RegisterCallback("KiwiPlatesCast","UNIT_SPELLCAST_INTERRUPTED", CastEvent)
+	LibCC.RegisterCallback("KiwiPlatesCast","UNIT_SPELLCAST_CHANNEL_START", ChannelEvent)
+	LibCC.RegisterCallback("KiwiPlatesCast","UNIT_SPELLCAST_CHANNEL_STOP", ChannelEvent)
 end
 
 -- Global functions

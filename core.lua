@@ -415,8 +415,8 @@ local function SkinPlate(plateFrame, UnitFrame, UnitAdded)
 			-- in classic we execute this code if gap is not defined to reanchor healthBar the "(isClassic and 0)" above forces to execute this code
 			-- in retail is not necessary because healthBar is already anchored to castBar with "correct" point values
 			healthBar:ClearAllPoints()
-			healthBar:SetPoint('BOTTOMLEFT', anchorFrame, 'TOPLEFT',  0,  gap or 0 )
-			healthBar:SetPoint('BOTTOMRIGHT',anchorFrame, 'TOPRIGHT', 0,  gap or 0 )
+			healthBar:SetPoint('BOTTOMLEFT', anchorFrame, isVanilla and 'BOTTOMLEFT'  or 'TOPLEFT',  0,  gap or 0 )
+			healthBar:SetPoint('BOTTOMRIGHT',anchorFrame, isVanilla and 'BOTTOMRIGHT' or 'TOPRIGHT', 0,  gap or 0 )
 			UnitFrame.castBarGap = gap
 		end
 		healthBar:SetShown( db.kHealthBar_enabled )
@@ -700,7 +700,7 @@ function addon:NAME_PLATE_UNIT_ADDED(unit)
 	local plateFrame = C_GetNamePlateForUnit(unit)
 	if UnitIsUnit(unit,'player') then return PersonalBarAdded(plateFrame) end
 	if plateFrame then
-		if not isVanilla then self:NAME_PLATE_CREATED(plateFrame) end
+		self:NAME_PLATE_CREATED(plateFrame)
 		local guid = UnitGUID(unit)
 		local UnitFrame = plateFrame.UnitFrame
 		NamePlates[plateFrame] = UnitFrame
@@ -1157,10 +1157,6 @@ do
 			SkinPlate(plateFrame, UnitFrame, true) -- true = Fake UNIT_ADDED to force a full update
 		end
 
-		if isVanilla then
-			addon.RealMobHealth = self.db.RealMobHealth and _G.RealMobHealth and _G.RealMobHealth.GetUnitHealth
-		end
-
 		UpdatePlatesOpacity()
 
 	end
@@ -1210,7 +1206,6 @@ end )
 ----------------------------------------------------------------
 
 addon:RegisterMessage('ENABLE', function()
-	if isVanilla then addon:RegisterEvent("NAME_PLATE_CREATED") end
 	addon:RegisterEvent("NAME_PLATE_UNIT_ADDED")
 	addon:RegisterEvent("NAME_PLATE_UNIT_REMOVED")
 	addon:RegisterEvent("PLAYER_TARGET_CHANGED")

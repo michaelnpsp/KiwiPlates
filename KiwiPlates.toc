@@ -1,6 +1,6 @@
 ## Interface: 90105
 ## Interface-Retail: 90105
-## Interface-Classic: 11400
+## Interface-Classic: 11401
 ## Interface-BCC: 20502
 ## Title: |cFF7FFF72Kiwi|r Plates
 ## Author: MiCHaEL
@@ -17,6 +17,11 @@ Libs\AceGUI-3.0\AceGUI-3.0.xml
 Libs\AceConfig-3.0\AceConfig-3.0.xml
 Libs\AceGUI-3.0-SharedMediaWidgets\widget.xml
 Libs\AceSerializer-3.0\AceSerializer-3.0.xml
+
+#@version-classic@
+# Libs\LibClassicCasterino\LibClassicCasterino.lua
+# Libs\LibClassicDurations\LibClassicDurations.xml
+#@end-version-classic@
 
 #@non-retail@
 castbar.lua

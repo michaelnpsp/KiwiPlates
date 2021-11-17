@@ -1177,20 +1177,6 @@ Opt_SetupOption( 'Skins/Settings', 'Health Text', {
 			Update()
 		end,
 	},
-	healthTextRealMobHealth = {
-		type = "toggle",
-		order = 8.1,
-		width = "full",
-		name = "Use RealMobHealth to display health values.",
-		desc = "Use RealMobHealth addon to display estimated health values.",
-		get = function() return addon.db.RealMobHealth end,
-		set = function (_, value)
-			addon.db.RealMobHealth = value or nil
-			Update()
-		end,
-		hidden = function() return not addon.isClassic end,
-		disabled = function() return not RealMobHealth end,
-	},
 	header2 = { type = "header", order = 9, name = "Position" },
 	healthTextOffsetX =  {
 		type = 'range', order = 10, name = 'X Adjust', min = -150, softMax = 150, step = 1,
