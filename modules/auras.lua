@@ -11,6 +11,7 @@ local apiHasBuffs     = not addon.isClassic
 local CreateFrame = CreateFrame
 local UnitReaction = UnitReaction
 local format = string.format
+local isVanilla = addon.isVanilla
 
 addon.defaults.auras = { enabled = "custom", buffsCentered = true }
 
@@ -161,7 +162,7 @@ do -- UNIT_AURA event
 					for i = 1, 8 do
 						name, texture, count, _, duration, expiration, _, isSteal = UnitAura(unit, i, "HELPFUL")
 						if not name then break end
-						if buffsDisplayStealable and isSteal then
+						if buffsDisplayStealable and (isSteal or isVanilla) then
 							CreateAura(1, i, "HELPFUL")
 						elseif buffsSpecial and buffsSpecial[name] then
 							CreateAura(2, i, "HELPFUL")
@@ -361,8 +362,8 @@ local NAMEPLATES = {
 	buffsDisplayStealable = {
 		type = "toggle",
 		order = 7, width = "normal",
-		name = "Display Stealable Buffs",
-		desc = "Display stealable buffs first highlighted with a green border (only for enemies).",
+		name = isVanilla and "Display Enemy Buffs" or "Display Stealable Buffs",
+		desc = isVanilla and "Display buffs first highlighted with a green border (only for enemies)." or "Display stealable buffs first highlighted with a green border (only for enemies).",
 		get = function() return addon.db.auras.buffsDisplayStealable end,
 		set = function (_, value)
 			addon.db.auras.buffsDisplayStealable = value or nil

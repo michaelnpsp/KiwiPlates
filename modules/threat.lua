@@ -24,6 +24,8 @@ local inCombat
 local ignoreCombat
 local threatColors
 local unitTarget  = setmetatable({}, {__index = function(t,k) local v=k.."target" t[k]=v return v end})
+local maxLevel = addon.isTBC and 70 or 60
+local lowThreatThreshold = (UnitLevel('player')>=maxLevel) and 2000*100 or 0
 
 -- not tanked / offtanked / insecure tanking / secure tanking
 addon.defaults.threat = {
@@ -31,8 +33,6 @@ addon.defaults.threat = {
 	colorsTank  = { [0] = { 1, 0, 0 }, [1] = { 0,  0,1 }, [2] = { 1, 1,0 }, [3] = { 0,1,0 }, },
 	colorsOther = {	[0] = { .85,1,0 }, [1] = { .35,1,0 }, [2] = { 1,.4,0 }, [3] = { 1,0,0 }, },
 }
-
-local lowThreatThreshold = 2000*100
 
 -- blizzard threat api is very slow, noTanking is used by targetclass widget to early notify changes in nameplate target
 -- so the tank probably is not longer tanking the unit even if the threat api did not notify the change yet.
