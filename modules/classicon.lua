@@ -61,7 +61,7 @@ function Widget.Enable()
 end
 
 function Widget.Disable()
-	addon:UnregisteMessage( 'UNIT_CLASSIFICATION_CHANGED', Widget.Update )
+	addon:UnregisterMessage( 'UNIT_CLASSIFICATION_CHANGED', Widget.Update )
 end
 
 addon:RegisterWidget( 'kIcon', Widget )

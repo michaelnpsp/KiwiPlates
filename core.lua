@@ -364,6 +364,10 @@ end
 -- Disable blizzard stuff
 ----------------------------------------------------------------
 
+local function ForceHide(self)
+	self:Hide()
+end
+
 local function DisableBlizzardStuff(UnitFrame)
 	local healthBar = UnitFrame.healthBar
 	healthBar.barTexture:SetColorTexture(0,0,0,0)
@@ -381,6 +385,7 @@ local function DisableBlizzardStuff(UnitFrame)
 		end
 		local level = UnitFrame.castBar:GetFrameLevel()+1
 		UnitFrame.RaidTargetFrame:SetFrameLevel(level)
+		UnitFrame.ClassificationFrame:SetScript('OnShow', ForceHide)
 		UnitFrame.ClassificationFrame:Hide()
 	end
 end
