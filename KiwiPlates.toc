@@ -6,6 +6,7 @@
 ## Author: MiCHaEL
 ## Version: @project-version@
 ## X-Curse-Project-ID: 95612
+## X-Wago-ID: RaN0xANj
 ## SavedVariables: KiwiPlatesDb
 
 Libs\LibStub\LibStub.lua
