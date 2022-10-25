@@ -10,6 +10,7 @@ local versionCli = select(4,GetBuildInfo())
 addon.isClassic = versionCli<40000 -- vanilla or tbc or wrath
 addon.isVanilla = versionCli<20000
 addon.isTBC     = versionCli>=20000 and versionCli<30000
+addon.isWrath   = versionCli>=30000 and versionCli<40000
 addon.isWoW90   = versionCli>=90000
 local versionToc = GetAddOnMetadata(addon.addonName,'Version')
 addon.versionToc = versionToc=='@project-version@' and 'Dev' or 'v'..versionToc

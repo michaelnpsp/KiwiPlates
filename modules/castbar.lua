@@ -5,6 +5,8 @@ local FontCache = addon.FontCache
 local TexCache = addon.TexCache
 local SetBorderTexture = addon.SetBorderTexture
 
+local fixSpellText = addon.isTBC or addon.isWrath
+
 local Widget = {
 	Name = 'Casting Bar',
 	Enabled = true,
@@ -14,7 +16,7 @@ function Widget.Create(UnitFrame)
 	local castBar = UnitFrame.castBar or UnitFrame.CastBar -- retail or TBC castbar
 	if not castBar then -- vanilla
 		castBar = CreateFrame("StatusBar", nil, UnitFrame, "KiwiPlatesCastingBarFrameTemplate")
-	elseif UnitFrame.CastBar then -- tbc
+	elseif UnitFrame.CastBar then -- tbc or wrath
 		UnitFrame.castBar = castBar -- for some reason the castbar name is uppercased in tbc
 		castBar.Border:Hide() -- we cannot reuse tbc border because blizzard code is continuosly changing the border width
 		castBar:ClearAllPoints()
@@ -46,7 +48,7 @@ function Widget.Layout(UnitFrame, frameAnchor, db, enabled)
 		else
 			castBar.Icon:SetTexCoord( 0.1, 0.9, 0.1, 0.9 )
 		end
-		if addon.isTBC then
+		if fixSpellText then -- tbc or wrath
 			castBar:SetScript('OnShow', nil) -- ugly fix, OnShow blizzard code changes the icon size and messes with the spell text.
 			castBar.Text:Show()
 		end
