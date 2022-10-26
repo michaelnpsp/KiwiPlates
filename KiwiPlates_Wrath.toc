@@ -1,8 +1,8 @@
-## Interface: 100000
+## Interface: 30400
 ## Title: |cFF7FFF72Kiwi|r Plates
 ## Author: MiCHaEL
 ## Version: @project-version@
-## X-Flavor: Mainline
+## X-Flavor: Wrath
 ## X-Curse-Project-ID: 95612
 ## X-Wago-ID: RaN0xANj
 ## SavedVariables: KiwiPlatesDb
@@ -22,7 +22,6 @@ tools.lua
 core.lua
 options.lua
 
-modules\powerbar.lua
 modules\auras.lua
 modules\threat.lua
 modules\combopoints.lua

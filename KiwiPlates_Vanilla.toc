@@ -1,8 +1,8 @@
-## Interface: 100000
+## Interface: 11402
 ## Title: |cFF7FFF72Kiwi|r Plates
 ## Author: MiCHaEL
 ## Version: @project-version@
-## X-Flavor: Mainline
+## X-Flavor: Vanilla
 ## X-Curse-Project-ID: 95612
 ## X-Wago-ID: RaN0xANj
 ## SavedVariables: KiwiPlatesDb
@@ -16,13 +16,18 @@ Libs\AceGUI-3.0\AceGUI-3.0.xml
 Libs\AceConfig-3.0\AceConfig-3.0.xml
 Libs\AceGUI-3.0-SharedMediaWidgets\widget.xml
 Libs\AceSerializer-3.0\AceSerializer-3.0.xml
+Libs\LibClassicCasterino\LibClassicCasterino.lua
+Libs\LibClassicDurations\LibClassicDurations.xml
+
+castbar.lua
+castbar.xml
+auras.xml
 
 init.lua
 tools.lua
 core.lua
 options.lua
 
-modules\powerbar.lua
 modules\auras.lua
 modules\threat.lua
 modules\combopoints.lua
@@ -36,6 +41,9 @@ modules\raidtarget.lua
 modules\classicon.lua
 modules\attackers.lua
 modules\targetclass.lua
+
+castbarplayer.lua
+castbartarget.lua
 
 ldb.lua
 database.lua
