@@ -13,7 +13,7 @@ addon.isTBC     = versionCli>=20000 and versionCli<30000
 addon.isWrath   = versionCli>=30000 and versionCli<40000
 addon.isWoW90   = versionCli>=90000
 local versionToc = GetAddOnMetadata(addon.addonName,'Version')
-addon.versionToc = versionToc=='@project-version@' and 'Dev' or 'v'..versionToc
+addon.versionToc = versionToc=='\@project-version\@' and 'Dev' or 'v'..versionToc
 
 ----------------------------------------------------------------
 -- Messages management
