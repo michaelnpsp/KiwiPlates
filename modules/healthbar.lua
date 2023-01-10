@@ -22,9 +22,6 @@ function Widget.Create(UnitFrame)
 	kHealthBar:SetPoint("BOTTOMRIGHT", healthBar.barTexture, "BOTTOMRIGHT")
 	kHealthBar.SetWidgetColor = kHealthBar.SetVertexColor
 	UnitFrame.kkHealthBar = kHealthBar
-	healthBar:SetScript('OnShow', function(self)
-		if self.__isHidden then self:Hide() end
-	end)
 end
 
 function Widget.Layout(UnitFrame, frameAnchor, db, enabled)
