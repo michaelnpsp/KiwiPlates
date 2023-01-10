@@ -39,7 +39,7 @@ function Widget.Update(UnitFrame)
 	local unit = UnitFrame.unit
 	local h = UnitHealth(unit)
 	local m = UnitHealthMax(unit)
-	local p = h/m
+	local p = m==0 and 0 or h/m
 	local mask = UnitFrame.__skin.healthMaskValue -- mask = something like "$h/$m|$p%"
 	if mask then
 		HealthTags['$p'] = format("%d",p*100)

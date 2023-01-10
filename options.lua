@@ -1572,6 +1572,7 @@ Opt_SetupOption( 'Skins/Settings', 'Cast Bar', {
 			Update()
 		end,
 		values = AceGUIWidgetLSMlists.statusbar,
+		hidden = function() return not addon.isClassic end,
 	},
 	headerBorder = { type = "header", order = 12, name = "Border", hidden = function() return not addon.__db.global.classicBorders end },
 	barBorderTexture = {

@@ -41,7 +41,9 @@ function Widget.Layout(UnitFrame, frameAnchor, db, enabled)
 		castBar.Icon:SetPoint("BOTTOMRIGHT", castBar, "BOTTOMLEFT", db.castBarIconOffsetX or -1, db.castBarIconOffsetY or 0)
 		castBar.Icon:SetSize(db.castBarIconSize or cbHeight, db.castBarIconSize or cbHeight)
 		castBar.Icon:SetShown(db.castBarIconEnabled)
-		castBar:SetStatusBarTexture( TexCache[db.castBarTexture] )
+		if addon.isClassic then
+			castBar:SetStatusBarTexture( TexCache[db.castBarTexture] ) -- in retail texture is overrided on cast start so this is useless
+		end
 		castBar.Text:SetFont( FontCache[db.castBarFontFile or 'Roboto Condensed Bold'], db.castBarFontSize or 8, db.castBarFontFlags or 'OUTLINE' )
 		if addon.cfgClassicBorders then
 			SetBorderTexture( castBar, castBar.cBorder, db.castBarBorderTexture, db.castBarBorderColor or ColorWhite )

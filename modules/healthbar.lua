@@ -10,6 +10,10 @@ local Widget = {
 	Enabled = true,
 }
 
+local function ForceHide(self)
+	self:Hide()
+end
+
 function Widget.Create(UnitFrame)
 	local healthBar = UnitFrame.healthBar
 	local layer, level = healthBar.barTexture:GetDrawLayer()
@@ -18,6 +22,9 @@ function Widget.Create(UnitFrame)
 	kHealthBar:SetPoint("BOTTOMRIGHT", healthBar.barTexture, "BOTTOMRIGHT")
 	kHealthBar.SetWidgetColor = kHealthBar.SetVertexColor
 	UnitFrame.kkHealthBar = kHealthBar
+	healthBar:SetScript('OnShow', function(self)
+		if self.__isHidden then self:Hide() end
+	end)
 end
 
 function Widget.Layout(UnitFrame, frameAnchor, db, enabled)
@@ -32,12 +39,13 @@ function Widget.Layout(UnitFrame, frameAnchor, db, enabled)
 		else
 			healthBar.barTexture:SetTexture( TexCache[db.healthBarTexture] )
 			kHealthBar:Hide()
-
 		end
+		healthBar:SetScript('OnShow', nil)
 	elseif kHealthBar then
 		UnitFrame.kHealthBar = nil
 		healthBar:Hide()
 		kHealthBar:Hide()
+		healthBar:SetScript('OnShow', ForceHide)
 	end
 end
 
