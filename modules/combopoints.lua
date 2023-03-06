@@ -175,7 +175,7 @@ addon:RegisterMessage('UPDATE', function()
 		end
 		if addon.db.combo.castBarAdjust then
 			addon:RegisterMessage('NAME_PLATE_CREATED', NamePlateCreated)
-			if not addon.isVanilla then
+			if not addon.isVanilla and CastingBarFrame_OnEvent then
 				hooksecurefunc( 'CastingBarFrame_OnEvent', AdjustComboFrame)
 			end
 		end
