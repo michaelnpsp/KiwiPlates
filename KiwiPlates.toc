@@ -2,6 +2,7 @@
 ## Title: |cFF7FFF72Kiwi|r Plates
 ## Author: MiCHaEL
 ## Version: @project-version@
+## IconTexture: Interface/AddOns/KiwiPlates/media/kiwi.tga
 ## X-Flavor: Mainline
 ## X-Curse-Project-ID: 95612
 ## X-Wago-ID: RaN0xANj
