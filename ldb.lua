@@ -7,6 +7,16 @@ local addon = KiwiPlates
 local DataBroker = LibStub("LibDataBroker-1.1", true)
 if not DataBroker then return end
 
+-- blizzard compartment
+if AddonCompartmentFrame and AddonCompartmentFrame.RegisterAddon then 
+	AddonCompartmentFrame:RegisterAddon({
+		text = "KiwiPlates",
+		icon = "Interface\\AddOns\\KiwiPlates\\media\\kiwi.tga",
+		func = function() addon:OnChatCommand("kiwiplates") end,
+		notCheckable = true,
+	})
+end 
+
 -- databroker
 local LDB = DataBroker:NewDataObject("KiwiPlates", {
 	type  = "launcher",
