@@ -4,6 +4,7 @@
 --
 -----------------------------------------------------------------------------------------------
 
+local GetAddOnMetadata = C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata
 local addon = CreateFrame('Frame')
 addon.addonName = ...
 local versionCli = select(4,GetBuildInfo())
