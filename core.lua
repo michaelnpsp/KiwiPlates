@@ -17,6 +17,7 @@ local format  = string.format
 local tinsert = table.insert
 local tremove = table.remove
 local tconcat = table.concat
+local C_Timer_After = C_Timer.After
 
 local isClassic = addon.isClassic
 local isVanilla = addon.isVanilla
@@ -424,8 +425,15 @@ local function SkinPlate(plateFrame, UnitFrame, UnitAdded)
 			healthBar:SetPoint('BOTTOMRIGHT',anchorFrame, isVanilla and 'BOTTOMRIGHT' or 'TOPRIGHT', 0,  gap or 0 )
 			UnitFrame.castBarGap = gap
 		end
-		healthBar:SetShown( db.kHealthBar_enabled )
 		healthBar:SetHeight( db.healthBarHeight or 12 )
+		if db.kHealthBar_enabled then
+			healthBar:Show()
+			if not healthBar:IsShown() then -- Workaround to weird bug, hidden bars refused to be visible
+				C_Timer_After(0, function() healthBar:Show() end)
+			end
+		else
+			healthBar:Hide()
+		end
 		-- castBar
 		local castBar = UnitFrame.kkCastBar
 		if castBar then
@@ -842,7 +850,7 @@ end
 local function CombatReskinCheck(delay)
 	if delay then
 		-- We need to add a delay because some times UnitAffectingCombat() does not return correct values just after combat start.
-		C_Timer.After(.05, CombatReskinCheck)
+		C_Timer_After(.05, CombatReskinCheck)
 		return
 	end
 	local reskin = ConditionFields['@combat']
