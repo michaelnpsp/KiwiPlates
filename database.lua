@@ -149,83 +149,138 @@ for i=1,6 do
 	}
 end
 
+
 -- profile database maintenance operations
-addon:SetupOptions( 'Profiles', 'Operations', {
-	newDesc = {
-		type = 'description',
-		order = 0.5,
-		name = "\nYou can create a new profile by entering a name in the editbox.",
-	},
-	newProfile = {
-		type = 'input',
-		name = 'New Profile Name',
-		order = 1,
-		get = function() end,
-		set = function(info,name)
-			addon:CreateNewProfile(name)
-		end,
-		validate = function(info,name)
-			name = strtrim(name)
-			return strlen(name)>2 and not addon.__db.profiles[name]
-		end,
-	},
-	copyDesc = {
-		type = 'description',
-		order = 1.5,
-		name = "\nCopy the settings from one existing profile into the currently active profile.",
-	},
-	copyProfile = {
-		type   = 'select',
-		order  = 2,
-		name   = 'Copy From',
-		desc   = "Copy the settings from one existing profile into the currently active profile.",
-		get    = function() end,
-		set    = function(_, key)
-			local profiles = addon.__db.profiles
-			profiles[addon.__profileKey] = addon.CopyTable( profiles[key] )
-			addon.__profileKey = nil
-			addon:PLAYER_TALENT_UPDATE()
-		end,
-		confirm = function() return "Selected profile will be copied into the current profile and current profile settings will be lost. Are you sure ?" end,
-		values = function()
-			wipe(values)
-			for key in pairs(addon.__db.profiles) do
-				if key ~= addon.__profileKey then
-					values[key] = key
+do
+	local kwpLoaded
+	local profilesRepo
+	local profilesValues = { [0] = "Basic" }
+	local newProfileIndex
+
+	addon:SetupOptions( 'Profiles', 'Operations', {
+		newDesc = {
+			type = 'description',
+			order = 0.5,
+			name = "\nYou can create a new profile based on the selected profile template.",
+		},
+		newProfileImage = {
+			type = "execute",
+			width= "full",
+			order = 0.8,
+			name = "",
+			imageWidth= 512,
+			imageHeight= 64,
+			image = function() return profilesRepo[newProfileIndex].banner end,
+			func =  function() end,
+			hidden = function()
+				if kwpLoaded==nil then
+					kwpLoaded = LoadAddOn("KiwiPlatesProfiles") or false
 				end
-			end
-			return values
-		end,
-	},
-	deleteDesc = {
-		type = 'description',
-		order = 2.5,
-		name = "\nYou can delete unused profiles from the database to save space.",
-	},
-	deleteProfile = {
-		type   = 'select',
-		order  = 3,
-		name   = 'Delete Profile',
-		desc   = "Unlisted profiles are in use by some toon and cannot be deleted.",
-		get    = function() end,
-		set    = function(_, key)
-			addon.__db.profiles[key] = nil
-			addon:Update()
-		end,
-		values = function()
-			wipe(values)
-			wipe(undeletable)
-			for _,specs in pairs(addon.__db.profileChars) do
-				for _,key in pairs(specs) do
-					undeletable[key] = true
+				return (newProfileIndex or 0) == 0
+			end,
+		},
+		newProfileTemplate = {
+			type = 'select',
+			name = 'Profile Template',
+			order = 0.9,
+			get = function()
+				return newProfileIndex
+			end,
+			set = function(info,v)
+				newProfileIndex = v
+			end,
+			values = function()
+				return profilesValues
+			end,
+			hidden = function() return profilesRepo == nil end,
+		},
+		newProfileName = {
+			type = 'input',
+			name = 'New Profile Name',
+			order = 1,
+			get = function() end,
+			set = function(info,name)
+				local profile = profilesRepo and profilesRepo[newProfileIndex or 0]
+				if profile then
+					local data = profile[1]
+					addon:ImportProfile( type(data)=='function' and data(profile.name) or data, name, true)
+					newProfileIndex = nil
+				else
+					addon:CreateNewProfile(name)
 				end
-			end
-			for key in pairs(addon.__db.profiles) do
-				if not undeletable[key] then values[key] = key end
-			end
-			return values
-		end,
-		confirm = function(_,key) return "Are you sure you want to delete the selected profile?" end,
-	},
-	footer = { type = "description", order = 100, name = " " },
-} )
+			end,
+			validate = function(info,name)
+				name = strtrim(name)
+				return strlen(name)>2 and not addon.__db.profiles[name]
+			end,
+			hidden = function() return profilesRepo and newProfileIndex==nil end,
+		},
+		copyDesc = {
+			type = 'description',
+			order = 1.5,
+			name = "\nCopy the settings from one existing profile into the currently active profile.",
+		},
+		copyProfile = {
+			type   = 'select',
+			order  = 2,
+			name   = 'Copy From',
+			desc   = "Copy the settings from one existing profile into the currently active profile.",
+			get    = function() end,
+			set    = function(_, key)
+				local profiles = addon.__db.profiles
+				profiles[addon.__profileKey] = addon.CopyTable( profiles[key] )
+				addon.__profileKey = nil
+				addon:PLAYER_TALENT_UPDATE()
+			end,
+			confirm = function() return "Selected profile will be copied into the current profile and current profile settings will be lost. Are you sure ?" end,
+			values = function()
+				wipe(values)
+				for key in pairs(addon.__db.profiles) do
+					if key ~= addon.__profileKey then
+						values[key] = key
+					end
+				end
+				return values
+			end,
+		},
+		deleteDesc = {
+			type = 'description',
+			order = 2.5,
+			name = "\nYou can delete unused profiles from the database to save space.",
+		},
+		deleteProfile = {
+			type   = 'select',
+			order  = 3,
+			name   = 'Delete Profile',
+			desc   = "Unlisted profiles are in use by some toon and cannot be deleted.",
+			get    = function() end,
+			set    = function(_, key)
+				addon.__db.profiles[key] = nil
+				addon:Update()
+			end,
+			values = function()
+				wipe(values)
+				wipe(undeletable)
+				for _,specs in pairs(addon.__db.profileChars) do
+					for _,key in pairs(specs) do
+						undeletable[key] = true
+					end
+				end
+				for key in pairs(addon.__db.profiles) do
+					if not undeletable[key] then values[key] = key end
+				end
+				return values
+			end,
+			confirm = function(_,key) return "Are you sure you want to delete the selected profile?" end,
+		},
+		footer = { type = "description", order = 100, name = " " },
+	} )
+
+	function addon:RegisterProfile(data)
+		profilesRepo = profilesRepo or {}
+		profilesRepo[#profilesRepo+1] = data
+		profilesValues[#profilesRepo] = data.name
+	end
+
+end
+

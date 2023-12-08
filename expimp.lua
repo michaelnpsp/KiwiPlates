@@ -52,20 +52,20 @@ local function Export(data)
 	return str
 end
 
-local function Import(str)
+local function Import(str, name, silent)
 	local sucess, data = LibStub("AceSerializer-3.0"):Deserialize( base64decode( gsub(str,'%s','') ) )
 	if sucess and type(data)=='table' and data.__addonName == 'KiwiPlates' and data.__profileName then
 		local borders = data.__classicBorders
-		local name = addon:GetUniqueProfileName(data.__profileName)
+		name = name or addon:GetUniqueProfileName(data.__profileName)
 		data.__addonName, data.__profileName, data.__classicBorders = nil, nil, nil
 		addon:CreateNewProfile(name, data)
-		print("KiwiPlates, New Profile imported:", name)
+		if not silent then
+			print("KiwiPlates, New Profile imported:", name)
+		end
 		collectgarbage()
-		if borders and not addon.__db.global.classicBorders then
-			addon:ConfirmDialog("This profile uses textures for the borders, do you want to enable Blizzard Border Textures ?\nThe UI will be reloaded.", function()
-				addon.__db.global.classicBorders = true
-				ReloadUI()
-			end)
+		if not borders ~= not addon.__db.global.classicBorders then
+			addon.__db.global.classicBorders = borders or nil
+			addon:ConfirmDialog("The UI must be reloaded to activate this profile. Are your sure?", ReloadUI )
 		end
 	else
 		print("KiwiPlates: Error Importing Profile, Wrong Data")
@@ -130,3 +130,8 @@ addon:SetupOptions( 'Profiles', 'Import&Export', {
 		end,
 	},
 } )
+
+-- publish some functions
+
+addon.ImportProfile = function(self, ...) Import(...) end
+addon.ExportProfile = function(self, ...) Export(...) end
