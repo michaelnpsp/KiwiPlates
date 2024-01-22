@@ -1091,7 +1091,7 @@ do
 		for class,color in pairs(cfg.classColor) do
 			ClassColors[class] = color
 		end
-		pixelScale = 768/select(2,GetPhysicalScreenSize())/WorldFrame:GetScale()
+		pixelScale = 768/select(2,GetPhysicalScreenSize())/WorldFrame:GetScale() * (cfg.scaleAdjust or 1)
 		if not InCombatLockdown() then
 			SetCVar("nameplateGlobalScale", 1)
 			SetCVar("nameplateSelectedScale", 1)
@@ -1141,6 +1141,17 @@ do
 		end
 	end
 
+	function addon:UpdateVisibility() -- friend/enemy visibility, only called from options
+		UpdateVisibility()
+	end
+
+	function addon:UpdateScale() -- scale adjust, only called from options
+		UpdateGeneral()
+		for _, UnitFrame in pairs(NamePlates) do
+			UnitFrame:SetScale(pixelScale)
+		end
+	end
+
 	function addon:Update()
 
 		UpgradeDatabase()
@@ -1173,14 +1184,6 @@ do
 		UpdatePlatesOpacity()
 
 	end
-end
-
-----------------------------------------------------------------
--- Friend/Enemy visibility, only called from options
-----------------------------------------------------------------
-
-function addon:UpdateVisibility()
-	UpdateVisibility()
 end
 
 ----------------------------------------------------------------

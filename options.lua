@@ -630,9 +630,24 @@ Opt_SetupOption( 'General', 'Nameplate Visibility (Target)', {
 } )
 
 Opt_SetupOption( 'General', 'Nameplates Appearance', {
+	nameplateScaleAdjust = {
+		type = "range",
+		order = 1, width = 1,
+		name = "Nameplates Scale",
+		desc = "Change this option to adjust the scale of the nameplates.",
+		softMin = 1, min = 0.1,
+		softMax = 3, max = 5,
+		step = 0.001, bigStep = 0.01,
+		isPercent = true,
+		get = function () return addon.db.general.scaleAdjust or 1 end,
+		set = function (_, v)
+			addon.db.general.scaleAdjust = v~=1 and v or nil
+			addon:UpdateScale()
+		end,
+	},
 	nameplateClassicBorders = {
 		type = "toggle",
-		order = 1, width = "double",
+		order = 2, width = 1.5,
 		name = "Blizzard Border Textures",
 		desc = "Enable Blizzard textures for nameplates & castbars borders. This option is global and will be applied to all profiles and skins.",
 		get = function()
