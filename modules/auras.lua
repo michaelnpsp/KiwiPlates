@@ -87,6 +87,17 @@ local function LayoutAuras(UnitFrame, db)
 	buffFrame:Show()
 end
 
+local function PlateAdded(UnitFrame, unit)
+	local frame = UnitFrame.__buffFrame
+	if frame then frame:Show() end
+	addon.UNIT_AURA(nil, unit)
+end
+
+local function PlateRemoved(UnitFrame, unit)
+	local frame = UnitFrame.__buffFrame
+	if frame then frame:Hide() end
+end
+
 do -- UNIT_AURA event
 	local NamePlatesByUnit = addon.NamePlatesByUnit
 	local UnitAura = apiHasDurations and UnitAura or LibStub("LibClassicDurations").UnitAuraDirect
@@ -245,7 +256,7 @@ addon:RegisterMessage('INITIALIZE', function()
 	local enabled = addon.db.auras.enabled
 	if enabled=="blizzard" then -- blizzard auras
 		NamePlateDriverFrame:RegisterEvent('UNIT_AURA')
-		addon:UnregisterMessage('NAME_PLATE_UNIT_ADDED',  addon.UNIT_AURA)
+		addon:UnregisterMessage('NAME_PLATE_UNIT_ADDED', addon.UNIT_AURA)
 		addon:UnregisterMessage('PLAYER_TARGET_ACQUIRED', addon.UNIT_AURA)
 		addon:UnregisterMessage('PLATE_SKINNED', LayoutAuras )
 		addon:UnregisterMessage('PLATE_SKINNED', DisableBlizAuras )
@@ -255,7 +266,8 @@ addon:RegisterMessage('INITIALIZE', function()
 		NamePlateDriverFrame:UnregisterEvent('UNIT_AURA')
 		addon:UnregisterMessage('PLATE_SKINNED', DisableBlizAuras )
 		addon:RegisterMessage('PLATE_SKINNED', LayoutAuras)
-		addon:RegisterMessage('NAME_PLATE_UNIT_ADDED',  addon.UNIT_AURA)
+		addon:RegisterMessage('NAME_PLATE_UNIT_ADDED', PlateAdded)
+		addon:RegisterMessage('NAME_PLATE_UNIT_REMOVED', PlateRemoved)
 		addon:RegisterMessage('PLAYER_TARGET_ACQUIRED', addon.UNIT_AURA)
 		addon:RegisterEvent('UNIT_AURA')
 		if addon.isVanilla then LibStub("LibClassicDurations"):Register(addon) end
@@ -263,7 +275,7 @@ addon:RegisterMessage('INITIALIZE', function()
 	else  -- no auras
 		NamePlateDriverFrame:UnregisterEvent('UNIT_AURA')
 		addon:UnregisterEvent('UNIT_AURA')
-		addon:UnregisterMessage('NAME_PLATE_UNIT_ADDED',  addon.UNIT_AURA)
+		addon:UnregisterMessage('NAME_PLATE_UNIT_ADDED', addon.UNIT_AURA)
 		addon:UnregisterMessage('PLAYER_TARGET_ACQUIRED', addon.UNIT_AURA)
 		addon:UnregisterMessage('PLATE_SKINNED', LayoutAuras )
 		addon:RegisterMessage('PLATE_SKINNED', DisableBlizAuras )
