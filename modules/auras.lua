@@ -23,6 +23,7 @@ local buffsDisplayStealable
 
 local ExtraUnits = {}
 local targetUnitFrame = CreateFrame('Frame')
+local NamePlateTooltip = CreateFrame("GameTooltip", "KiwiPlatesTooltip", UIParent, "GameTooltipTemplate")
 
 local function HideBlizzBuffFrame(self)
 	if hideBlizzard then
@@ -37,7 +38,8 @@ local function OnEnter(self)
 	self.UpdateTooltip = OnEnter
 end
 
-local function OnLeave()
+local function OnLeave(self)
+	self.UpdateTooltip = nil
 	NamePlateTooltip:Hide()
 end
 
