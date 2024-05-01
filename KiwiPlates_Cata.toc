@@ -2,7 +2,7 @@
 ## Title: |cFF7FFF72Kiwi|r Plates
 ## Author: MiCHaEL
 ## Version: @project-version@
-## X-Flavor: Wrath
+## X-Flavor: Cata
 ## X-Curse-Project-ID: 95612
 ## X-Wago-ID: RaN0xANj
 ## SavedVariables: KiwiPlatesDb
