@@ -8,10 +8,11 @@ local GetAddOnMetadata = C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetad
 local addon = CreateFrame('Frame')
 addon.addonName = ...
 local versionCli = select(4,GetBuildInfo())
-addon.isClassic = versionCli<40000 -- vanilla or tbc or wrath
+addon.isClassic = versionCli<50000 -- vanilla or tbc or wrath or cata
 addon.isVanilla = versionCli<20000
 addon.isTBC     = versionCli>=20000 and versionCli<30000
 addon.isWrath   = versionCli>=30000 and versionCli<40000
+addon.isCata    = versionCli>=40000 and versionCli<50000
 addon.isWoW90   = versionCli>=90000
 local versionToc = GetAddOnMetadata(addon.addonName,'Version')
 addon.versionToc = versionToc=='\@project-version\@' and 'Dev' or 'v'..versionToc
