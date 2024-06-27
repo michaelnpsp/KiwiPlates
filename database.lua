@@ -6,6 +6,7 @@ local addon = KiwiPlates
 
 local rootDB = { global = {}, profiles = {}, profileChars = {} }
 
+local LoadAddOn = C_AddOns and C_AddOns.LoadAddOn or LoadAddOn
 local GetNumSpecializations = not addon.isClassic and GetNumSpecializations or function() return 1 end
 local GetSpecialization     = not addon.isClassic and GetSpecialization     or function() return 1 end
 local GetSpecializationInfo = not addon.isClassic and GetSpecializationInfo or function() return 1, "Default" end

@@ -2366,7 +2366,12 @@ addon:RegisterMessage('INITIALIZE', function()
 		HideUIPanel(GameMenuFrame)
 		addon.OnChatCommand()
 	end)
-	InterfaceOptions_AddCategory(optionsFrame)
+	if InterfaceOptions_AddCategory then
+		InterfaceOptions_AddCategory(optionsFrame)
+	else
+		local category = Settings.RegisterCanvasLayoutCategory(optionsFrame, optionsFrame.name)
+		Settings.RegisterAddOnCategory(category)
+	end
 	addon.optionsFrame = optionsFrame
 end	)
 

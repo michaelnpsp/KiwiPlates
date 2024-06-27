@@ -102,6 +102,11 @@ end
 
 do -- UNIT_AURA event
 	local NamePlatesByUnit = addon.NamePlatesByUnit
+	local GetAuraDataByIndex = C_UnitAuras and C_UnitAuras.GetAuraDataByIndex
+	local UnitAura = UnitAura or function(unit, index, filter)
+		local a = GetAuraDataByIndex(unit, index, filter)
+		if a then return a.name, a.icon, a.charges, a.dispelName, a.duration, a.expirationTime, a.sourceUnit, a.isStealable end
+	end
 	local UnitAura = apiHasDurations and UnitAura or LibStub("LibClassicDurations").UnitAuraDirect
 	local UnitIsUnit = UnitIsUnit
 	local UnitReaction = UnitReaction
@@ -141,7 +146,7 @@ do -- UNIT_AURA event
 		elseif type==2 then -- buff special list
 			buff.Border:SetColorTexture(.2,1,1)
 		end
-		if count > 1 then
+		if count and count > 1 then
 			buff.CountFrame.Count:SetText(count)
 			buff.CountFrame.Count:Show()
 		else

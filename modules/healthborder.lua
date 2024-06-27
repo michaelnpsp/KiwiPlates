@@ -9,7 +9,14 @@ local SetBorderTexture = addon.SetBorderTexture
 local function CreateHealthBorderClassic(UnitFrame)
 	local healthBar = UnitFrame.healthBar
 	local layer = healthBar.barTexture:GetDrawLayer()
-	local border = addon.isClassic and healthBar.border:GetRegions() or healthBar.border:CreateTexture()
+	local border
+	if addon.isClassic then
+		border = healthBar.border:GetRegions()
+	elseif UnitFrame.HealthBarsContainer then
+		border = UnitFrame.HealthBarsContainer.border:CreateTexture()
+	else
+		border = healthBar.border:CreateTexture()
+	end
 	border.widgetName = 'kHealthBorder'
 	border:SetTexCoord(0, 1, 0, 1)
 	border:SetDrawLayer( layer, 7 )

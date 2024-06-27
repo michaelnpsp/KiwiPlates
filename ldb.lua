@@ -8,16 +8,17 @@ local DataBroker = LibStub("LibDataBroker-1.1", true)
 if not DataBroker then return end
 
 -- blizzard compartment
-if AddonCompartmentFrame and AddonCompartmentFrame.RegisterAddon then 
+if AddonCompartmentFrame and AddonCompartmentFrame.RegisterAddon then
 	AddonCompartmentFrame:RegisterAddon({
 		text = "KiwiPlates",
 		icon = "Interface\\AddOns\\KiwiPlates\\media\\kiwi.tga",
 		func = function() addon:OnChatCommand("kiwiplates") end,
 		notCheckable = true,
 	})
-end 
+end
 
 -- databroker
+local GetAddOnInfo = C_AddOns and C_AddOns.GetAddOnInfo or GetAddOnInfo
 local LDB = DataBroker:NewDataObject("KiwiPlates", {
 	type  = "launcher",
 	label = GetAddOnInfo("KiwiPlates", "Title"),
@@ -62,6 +63,17 @@ do
 			end,
 		},
 	}
+	local EasyMenu_Initialize = EasyMenu_Initialize or function(frame, level, menuList)
+		for index = 1, #menuList do
+			local value = menuList[index]
+			if value.text then value.index = index; UIDropDownMenu_AddButton(value, level) end
+		end
+	end
+	local EasyMenu = EasyMenu or function(menuList, menuFrame, anchor, x, y, displayMode, autoHideDelay)
+		if displayMode=='MENU' then menuFrame.displayMode = displayMode end
+		UIDropDownMenu_Initialize(menuFrame, EasyMenu_Initialize, displayMode, nil, menuList)
+		ToggleDropDownMenu(1, nil, menuFrame, anchor, x, y, menuList, nil, autoHideDelay)
+	end
 	addon.MenuShow = function()
 		menuFrame = menuFrame or CreateFrame("Frame", "KiwiPlatesLDBPopupMenu", UIParent, "UIDropDownMenuTemplate")
 		EasyMenu(menuTable, menuFrame, "cursor", 0 , 0, "MENU", 1)

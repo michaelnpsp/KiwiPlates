@@ -369,6 +369,10 @@ local function ForceHide(self)
 	self:Hide()
 end
 
+local function ForceHideHealth(self)
+	if self.kkDisabled then self:Hide() end
+end
+
 local function DisableBlizzardStuff(UnitFrame)
 	local healthBar = UnitFrame.healthBar
 	healthBar.barTexture:SetColorTexture(0,0,0,0)
@@ -378,7 +382,7 @@ local function DisableBlizzardStuff(UnitFrame)
 		UnitFrame.LevelFrame:Hide()
 		if not cfgClassicBorders then healthBar.border:Hide() end
 	else
-		local textures = healthBar.border.Textures
+		local textures = healthBar.border and healthBar.border.Textures or UnitFrame.HealthBarsContainer.border.Textures
 		for i=#textures,1,-1 do
 			textures[i]:SetVertexColor(0,0,0,0)
 			textures[i]:SetColorTexture(0,0,0,0)
@@ -388,6 +392,9 @@ local function DisableBlizzardStuff(UnitFrame)
 		UnitFrame.RaidTargetFrame:SetFrameLevel(level)
 		UnitFrame.ClassificationFrame:SetScript('OnShow', ForceHide)
 		UnitFrame.ClassificationFrame:Hide()
+		if UnitFrame.HealthBarsContainer then
+			UnitFrame.HealthBarsContainer:SetScript("OnShow", ForceHideHealth)
+		end
 	end
 end
 
@@ -408,6 +415,7 @@ local function SkinPlate(plateFrame, UnitFrame, UnitAdded)
 	UnitFrame:SetAlpha( (mouse and 1) or (target and cfgAlpha1) or (not targetExists and cfgAlpha3) or cfgAlpha2 )
 	local Reskin = (db ~= UnitFrame.__skin)
 	if Reskin or UnitAdded then -- blizzard code resets these settings, so we need to reapply them even if our skin has not changed.
+		local healthContainer = UnitFrame.HealthBarsContainer
 		-- UnitFrame
 		UnitFrame:ClearAllPoints()
 		UnitFrame:SetPoint( 'TOP', plateFrame, 'TOP', 0, 0 )
@@ -420,19 +428,31 @@ local function SkinPlate(plateFrame, UnitFrame, UnitAdded)
 		if gap ~= UnitFrame.castBarGap then
 			-- in classic we execute this code if gap is not defined to reanchor healthBar the "(isClassic and 0)" above forces to execute this code
 			-- in retail is not necessary because healthBar is already anchored to castBar with "correct" point values
-			healthBar:ClearAllPoints()
-			healthBar:SetPoint('BOTTOMLEFT', anchorFrame, isVanilla and 'BOTTOMLEFT'  or 'TOPLEFT',  0,  gap or 0 )
-			healthBar:SetPoint('BOTTOMRIGHT',anchorFrame, isVanilla and 'BOTTOMRIGHT' or 'TOPRIGHT', 0,  gap or 0 )
+			local bar = healthContainer or healthBar
+			bar:ClearAllPoints()
+			bar:SetPoint('BOTTOMLEFT', anchorFrame, isVanilla and 'BOTTOMLEFT'  or 'TOPLEFT',  0,  gap or 0 )
+			bar:SetPoint('BOTTOMRIGHT',anchorFrame, isVanilla and 'BOTTOMRIGHT' or 'TOPRIGHT', 0,  gap or 0 )
 			UnitFrame.castBarGap = gap
 		end
-		healthBar:SetHeight( db.healthBarHeight or 12 )
-		if db.kHealthBar_enabled then
-			healthBar:Show()
-			if not healthBar:IsShown() then -- Workaround to weird bug, hidden bars refused to be visible
-				C_Timer_After(0, function() healthBar:Show() end)
+		if healthContainer then
+			healthContainer:SetHeight( db.healthBarHeight or 12 )
+			if db.kHealthBar_enabled then
+				healthContainer.kkDisabled = nil
+				healthContainer:Show()
+			else
+				healthContainer.kkDisabled = true
+				healthContainer:Hide()
 			end
 		else
-			healthBar:Hide()
+			healthBar:SetHeight( db.healthBarHeight or 12 )
+			if db.kHealthBar_enabled then
+				healthBar:Show()
+				if not healthBar:IsShown() then -- Workaround to weird bug, hidden bars refused to be visible
+					C_Timer_After(0, function() healthBar:Show() end)
+				end
+			else
+				healthBar:Hide()
+			end
 		end
 		-- castBar
 		local castBar = UnitFrame.kkCastBar
@@ -690,7 +710,9 @@ do
 				CreateMethods[widgetName](UnitFrame)
 			end
 		end
-		UnitFrame.healthBar:SetScript('OnSizeChanged', FixHealthBarSize) -- see FixHealthBarSize()
+		if not UnitFrame.HealthBarsContainer then
+			UnitFrame.healthBar:SetScript('OnSizeChanged', FixHealthBarSize) -- see FixHealthBarSize()
+		end
 		UnitFrame.__skin = nil
 	end
 	function addon:NAME_PLATE_CREATED(plateFrame)
