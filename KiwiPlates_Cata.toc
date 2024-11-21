@@ -1,4 +1,4 @@
-## Interface: 40400
+## Interface: 40401
 ## Title: |cFF7FFF72Kiwi|r Plates
 ## Author: MiCHaEL
 ## Version: @project-version@
