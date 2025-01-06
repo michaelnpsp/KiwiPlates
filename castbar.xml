@@ -7,10 +7,10 @@
 		</KeyValues>
 		<Layers>
 			<Layer level="BACKGROUND">
-				<Texture parentKey="background" textureSubLevel="1">
+				<Texture parentKey="background">
 					<Color r=".2" g=".2" b=".2" a=".85"/>
 				</Texture>
-				<Texture parentKey="Border" textureSubLevel="0">
+				<Texture parentKey="Border">
 					<Color r="0" g="0" b="0" a="1"/>
 					<Anchors>
 					  <Anchor point="TOPLEFT"><Offset><AbsDimension x="-1" y="1"/></Offset></Anchor>
@@ -18,7 +18,7 @@
 					 </Anchors>
 				</Texture>
 			</Layer>
-			<Layer level="OVERLAY" textureSubLevel="1">
+			<Layer level="OVERLAY">
 				<FontString parentKey="Text" inherits="SystemFont_Shadow_Small">
 					<Size x="0" y="16" />
 					<Anchors>
