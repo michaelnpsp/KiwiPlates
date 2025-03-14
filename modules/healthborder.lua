@@ -8,24 +8,21 @@ local SetBorderTexture = addon.SetBorderTexture
 -- classic border style (rounded)
 local function CreateHealthBorderClassic(UnitFrame)
 	local healthBar = UnitFrame.healthBar
-	local layer = healthBar.barTexture:GetDrawLayer()
-	local border
 	if addon.isClassic then
-		border = healthBar.border:GetRegions()
-	elseif UnitFrame.HealthBarsContainer then
-		border = UnitFrame.HealthBarsContainer.border:CreateTexture()
-	else
-		border = healthBar.border:CreateTexture()
+		local border = healthBar.border:GetRegions()
+		border:Hide()
+		border:SetParent(nil)
 	end
+	local border = healthBar:CreateTexture()
 	border.widgetName = 'kHealthBorder'
 	border:SetTexCoord(0, 1, 0, 1)
-	border:SetDrawLayer( layer, 7 )
+	border:SetDrawLayer( healthBar.barTexture:GetDrawLayer(), 7 )
 	border:SetParent(healthBar)
 	border.SetWidgetColor = border.SetVertexColor
 	UnitFrame.kkHealthBorder = border
 end
 
--- reail border style (squared)
+-- retail border style (squared)
 local CreateHealthBorderRetail
 do
 	local BORDER_POINTS = {
