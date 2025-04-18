@@ -194,6 +194,13 @@ HiddenFrame:Hide()
 addon.HiddenFrame = HiddenFrame
 
 ----------------------------------------------------------------
+-- Used in vanilla to reparent buff frames
+----------------------------------------------------------------
+
+local RootFrame = isVanilla and CreateFrame("Frame") or nil
+addon.RootFrame = RootFrame
+
+----------------------------------------------------------------
 -- Highlight texture
 ----------------------------------------------------------------
 
@@ -1118,6 +1125,9 @@ do
 			SetCVar("nameplateGlobalScale", 1)
 			SetCVar("nameplateSelectedScale", 1)
 			SetCVar("nameplateMinScale", 1)
+		end
+		if RootFrame then
+			RootFrame:SetScale(pixelScale)
 		end
 		cfgClassicBorders = addon.__db.global.classicBorders
 		addon.cfgClassicBorders = cfgClassicBorders

@@ -12,6 +12,7 @@ local CreateFrame = CreateFrame
 local UnitReaction = UnitReaction
 local format = string.format
 local isVanilla = addon.isVanilla
+local RootFrame = addon.RootFrame
 
 addon.defaults.auras = { enabled = "custom", buffsCentered = true }
 
@@ -48,7 +49,7 @@ local function CreateBuffFrame(UnitFrame)
 		UnitFrame.__BlizzBuffFrameHidden = true
 		UnitFrame.BuffFrame:HookScript('OnShow',HideBlizzBuffFrame )
 	end
-	local buffFrame = CreateFrame( 'Frame', nil, UnitFrame )
+	local buffFrame = CreateFrame( 'Frame', nil, RootFrame or UnitFrame )
 	buffFrame.buffList = {}
 	UnitFrame.__buffFrame = buffFrame
 	buffFrame:Show()
