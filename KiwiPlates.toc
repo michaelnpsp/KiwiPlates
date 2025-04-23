@@ -1,4 +1,4 @@
-## Interface: 110100
+## Interface: 110105
 ## Title: |cFF7FFF72Kiwi|r Plates
 ## Author: MiCHaEL
 ## Version: @project-version@
