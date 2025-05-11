@@ -5,9 +5,16 @@ local LibCC = LibStub("LibClassicCasterino")
 local next =  next
 local GetTime = GetTime
 
+local function HideCastBar(self)
+	self.channeling = nil
+	self.casting = nil
+	self:Hide()
+end
+
 local function UpdateCastBar(self, channel, name, _, texture, startTimeMS, endTimeMS)
 	if name then
 		self.channeling = channel
+		self.casting = not channel
 		self.maxValue = (endTimeMS - startTimeMS)/1000
 		self.value = GetTime() - startTimeMS/1000
 		self:SetMinMaxValues(0, self.maxValue)
@@ -16,7 +23,7 @@ local function UpdateCastBar(self, channel, name, _, texture, startTimeMS, endTi
 		self:SetAlpha(1)
 		self:Show()
 	else
-		self:Hide()
+		HideCastBar(self)
 	end
 end
 
@@ -26,11 +33,7 @@ local function RefreshCastBar(self, unit)
 		UpdateCastBar(self, false, name, _, texture, startTimeMS, endTimeMS)
 	else
 		name, _, texture, startTimeMS, endTimeMS = LibCC:UnitChannelInfo(unit)
-		if name then
-			UpdateCastBar(self, true, name, _, texture, startTimeMS, endTimeMS)
-		else
-			self:Hide()
-		end
+		UpdateCastBar(self, true, name, _, texture, startTimeMS, endTimeMS)
 	end
 end
 
@@ -81,7 +84,7 @@ function KiwiPlatesCastingBarFrame_OnUpdate(self, elapsed)
 		self.value = value
 		self:SetValue(self.channeling and self.maxValue-value or value)
 	else
-		self:Hide()
+		HideCastBar(self)
 	end
 end
 
@@ -91,6 +94,6 @@ function KiwiPlatesCastingBarFrame_SetUnit(self, unit)
 		RefreshCastBar(self, unit)
 	else
 		UnregisterCallback(self)
-		self:Hide()
+		HideCastBar(self)
 	end
 end

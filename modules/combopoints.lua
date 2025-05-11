@@ -95,7 +95,6 @@ local function Attach2Plate(UnitFrame)
 	end
 end
 
-
 -- attach combo points frame to UIParent
 local function Attach2Screen()
 	local db = addon.db.combo
@@ -164,6 +163,7 @@ end
 
 -- update config
 addon:RegisterMessage('UPDATE', function()
+	KiwiPlatesCastingBarFrame_ComboFrameAdjust = nil
 	if addon.db.combo.enabled then
 		InitFrame()
 		frame:RegisterUnitEvent('UNIT_MAXPOWER','player')
@@ -177,6 +177,8 @@ addon:RegisterMessage('UPDATE', function()
 			addon:RegisterMessage('NAME_PLATE_CREATED', NamePlateCreated)
 			if not addon.isVanilla and CastingBarFrame_OnEvent then
 				hooksecurefunc( 'CastingBarFrame_OnEvent', AdjustComboFrame)
+			else
+				KiwiPlatesCastingBarFrame_ComboFrameAdjust = AdjustComboFrame
 			end
 		end
 	else
