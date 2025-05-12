@@ -16,8 +16,8 @@ function Widget.Create(UnitFrame)
 	local castBar = UnitFrame.castBar or UnitFrame.CastBar -- retail or TBC castbar
 	if not castBar then -- vanilla
 		castBar = CreateFrame("StatusBar", nil, UnitFrame, "KiwiPlatesCastingBarFrameTemplate")
-		castBar:SetScript("OnShow",KiwiPlatesCastingBarFrame_ComboFrameAdjust)
-		castBar:SetScript("OnHide",KiwiPlatesCastingBarFrame_ComboFrameAdjust)
+		castBar:SetScript("OnShow",KiwiPlatesCastingBarFrame_AdjustComboFrame)
+		castBar:SetScript("OnHide",KiwiPlatesCastingBarFrame_AdjustComboFrame)
 	elseif UnitFrame.CastBar then -- tbc or wrath
 		UnitFrame.castBar = castBar -- for some reason the castbar name is uppercased in tbc
 		castBar.Border:Hide() -- we cannot reuse tbc border because blizzard code is continuosly changing the border width

@@ -169,7 +169,7 @@ end
 
 function addon.GetCustomDungeonRole(unit)
 	local roles = addon.db.roles
-	return roles[ UnitName(unit) or 0] or 'DAMAGER'
+	return roles[ UnitName(unit) or 0] or 'NONE'
 end
 
 function addon.SetCustomDungeonRole(unit, role)

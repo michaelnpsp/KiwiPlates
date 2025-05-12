@@ -15,7 +15,10 @@ local UnitThreatSituation = UnitThreatSituation
 local UnitDetailedThreatSituation = UnitDetailedThreatSituation
 local UnitGroupRolesAssigned = UnitGroupRolesAssigned or addon.GetCustomDungeonRole
 local GetSpecialization = GetSpecialization or function() end
-local GetSpecializationRole = GetSpecializationRole or function() return addon.db.threat.playerRole end
+local GetSpecializationRole = GetSpecializationRole or function()
+	local role = UnitGroupRolesAssigned("player") or 'NONE'
+	return role=='NONE' and addon.db.threat.playerRole or role
+end
 local NamePlatesByUnit  = addon.NamePlatesByUnit
 local UpdateWidgetColor = addon.UpdateWidgetColor
 

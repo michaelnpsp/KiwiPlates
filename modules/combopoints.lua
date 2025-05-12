@@ -74,6 +74,20 @@ frame:SetScript('OnEvent', function(self, _, _, powerType)
 	end
 end)
 
+-- hook, combo frame adjust due to castbar
+local function AdjustComboFrame(castBar, event)
+	if frameParent and castBar.__comboParent == frameParent then
+		local visible = castBar.casting or castBar.channeling
+		if flagCastBarAdjusted ~= visible then
+			local db = addon.db.combo
+			local adjY = (db.castBarAdjust and visible and castBar:GetHeight()*db.castBarAdjust) or 0
+			frame:ClearAllPoints()
+			frame:SetPoint('CENTER', db.offsetX or 0,  (db.offsetY or -15) + adjY)
+			flagCastBarAdjusted = visible
+		end
+	end
+end
+
 -- attach combo points frame to target nameplate
 local function Attach2Plate(UnitFrame)
 	UnitFrame = UnitFrame or GetTargetUnitFrame()
@@ -81,7 +95,8 @@ local function Attach2Plate(UnitFrame)
 		local castBar = UnitFrame.kkCastBar
 		local db = addon.db.combo
 		local iconSize = db.iconSize or 20
-		local adjY = db.castBarAdjust and (castBar and castBar:IsVisible() and castBar:GetHeight()*db.castBarAdjust) or 0
+		local adjY = (db.castBarAdjust and castBar and castBar:IsVisible()) and castBar:GetHeight()*db.castBarAdjust or 0
+		flagCastBarAdjusted = (adjY~=0) or nil
 		frameParent = UnitFrame.healthBar or UnitFrame
 		frame:SetParent( frameParent )
 		frame:SetFrameLevel( UnitFrame.RaidTargetFrame:GetFrameLevel() + 1 )
@@ -137,20 +152,6 @@ local function NamePlateCreated(UnitFrame)
 	end
 end
 
--- hook, combo frame adjust due to castbar
-local function AdjustComboFrame(castBar, event)
-	if frameParent and castBar.__comboParent == frameParent then
-		local visible = castBar.casting or castBar.channeling
-		if flagCastBarAdjusted ~= visible then
-			local db = addon.db.combo
-			local adjY = (db.castBarAdjust and visible and castBar:GetHeight()*db.castBarAdjust) or 0
-			frame:ClearAllPoints()
-			frame:SetPoint('CENTER', db.offsetX or 0,  (db.offsetY or -15) + adjY)
-			flagCastBarAdjusted = visible
-		end
-	end
-end
-
 -- initial positioning
 local function InitFrame()
 	flagAttachToScreen = (addon.db.combo.attachToScreen==false)  -- nil:attach to target plate/false:attach to target plate or screen/true:attach to screen
@@ -163,7 +164,7 @@ end
 
 -- update config
 addon:RegisterMessage('UPDATE', function()
-	KiwiPlatesCastingBarFrame_ComboFrameAdjust = nil
+	KiwiPlatesCastingBarFrame_AdjustComboFrame = nil
 	if addon.db.combo.enabled then
 		InitFrame()
 		frame:RegisterUnitEvent('UNIT_MAXPOWER','player')
@@ -178,7 +179,7 @@ addon:RegisterMessage('UPDATE', function()
 			if not addon.isVanilla and CastingBarFrame_OnEvent then
 				hooksecurefunc( 'CastingBarFrame_OnEvent', AdjustComboFrame)
 			else
-				KiwiPlatesCastingBarFrame_ComboFrameAdjust = AdjustComboFrame
+				KiwiPlatesCastingBarFrame_AdjustComboFrame = AdjustComboFrame
 			end
 		end
 	else
