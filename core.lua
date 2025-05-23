@@ -1129,6 +1129,7 @@ do
 		if RootFrame then
 			RootFrame:SetScale(pixelScale)
 		end
+		addon.pixelScale = pixelScale
 		cfgClassicBorders = addon.__db.global.classicBorders
 		addon.cfgClassicBorders = cfgClassicBorders
 	end
@@ -1182,6 +1183,7 @@ do
 		for _, UnitFrame in pairs(NamePlates) do
 			UnitFrame:SetScale(pixelScale)
 		end
+		self:SendMessage('UPDATE_SCALE')
 	end
 
 	function addon:Update()

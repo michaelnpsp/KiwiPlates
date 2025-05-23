@@ -5,6 +5,7 @@ local _,playerClass = UnitClass('player')
 if playerClass~='DRUID' and playerClass~='ROGUE' and playerClass~='MONK' then return end
 
 -- local variables
+local UnitExists = UnitExists
 local UnitPower = UnitPower
 local UnitPowerMax = UnitPowerMax
 local UnitPowerType = UnitPowerType
@@ -99,6 +100,7 @@ local function Attach2Plate(UnitFrame)
 		flagCastBarAdjusted = (adjY~=0) or nil
 		frameParent = UnitFrame.healthBar or UnitFrame
 		frame:SetParent( frameParent )
+		frame:SetScale(1)
 		frame:SetFrameLevel( UnitFrame.RaidTargetFrame:GetFrameLevel() + 1 )
 		frame:SetPoint('CENTER', db.offsetX or 0,  (db.offsetY or -15) + adjY)
 		frame:SetSize( iconSize*4, iconSize)
@@ -116,8 +118,9 @@ local function Attach2Screen()
 	local iconSize = db.screenIconSize or 20
 	frameParent = UIParent
 	frame:SetParent( frameParent )
+	frame:SetScale( addon.pixelScale / frameParent:GetEffectiveScale() )
 	frame:SetPoint('CENTER', db.screenOffsetX or 0,  db.screenOffsetY or 0 )
-	frame:SetSize( iconSize*4, iconSize)
+	frame:SetSize( iconSize*4, iconSize )
 	if isClassic then texture:SetTexCoord(0,0,0,0) end
 	frame.UnitFrame = nil
 	frame:Show()
@@ -137,7 +140,7 @@ end
 local function NamePlateTargetChanged(plateFrame)
 	if plateFrame then
 		Attach2Plate(plateFrame.UnitFrame)
-	elseif flagAttachToScreen then -- attach to screen only if there is no target nameplate
+	elseif flagAttachToScreen and UnitExists('target') then -- attach to screen only if there is no target nameplate
 		Attach2Screen()
 	elseif frame:IsShown() then -- never attach to screen, hide instead
 		Detach()
@@ -170,6 +173,7 @@ addon:RegisterMessage('UPDATE', function()
 		frame:RegisterUnitEvent('UNIT_MAXPOWER','player')
         frame:RegisterUnitEvent('UNIT_POWER_FREQUENT','player')
 		frame:RegisterUnitEvent('UNIT_DISPLAYPOWER','player')
+		addon:RegisterMessage('UPDATE_SCALE', InitFrame)
 		addon:RegisterMessage('PLAYER_TARGET_CHANGED', Update)
 		if addon.db.combo.attachToScreen~=true then
 			addon:RegisterMessage('NAME_PLATE_TARGET_CHANGED', NamePlateTargetChanged)
@@ -186,6 +190,7 @@ addon:RegisterMessage('UPDATE', function()
 		frame:UnregisterEvent('UNIT_MAXPOWER')
         frame:UnregisterEvent('UNIT_POWER_FREQUENT')
         frame:UnregisterEvent('UNIT_DISPLAYPOWER')
+		addon:UnregisterMessage('UPDATE_SCALE', InitFrame)
 		addon:UnregisterMessage('PLAYER_TARGET_CHANGED', Update)
 		addon:UnregisterMessage('NAME_PLATE_TARGET_CHANGED', NamePlateTargetChanged)
 		addon:UnregisterMessage('NAME_PLATE_CREATED', NamePlateCreated)
