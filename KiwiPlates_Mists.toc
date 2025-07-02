@@ -1,0 +1,43 @@
+## Interface: 50500
+## Title: |cFF7FFF72Kiwi|r Plates
+## Author: MiCHaEL
+## Version: @project-version@
+## X-Flavor: Mists
+## X-Curse-Project-ID: 95612
+## X-Wago-ID: RaN0xANj
+## SavedVariables: KiwiPlatesDb
+
+Libs\LibStub\LibStub.lua
+Libs\CallbackHandler-1.0\CallbackHandler-1.0.xml
+Libs\LibSharedMedia-3.0\LibSharedMedia-3.0.lua
+Libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
+Libs\LibDBIcon-1.0\LibDBIcon-1.0.lua
+Libs\AceGUI-3.0\AceGUI-3.0.xml
+Libs\AceConfig-3.0\AceConfig-3.0.xml
+Libs\AceGUI-3.0-SharedMediaWidgets\widget.xml
+Libs\AceSerializer-3.0\AceSerializer-3.0.xml
+
+auras.xml
+
+init.lua
+tools.lua
+core.lua
+options.lua
+
+modules\auras.lua
+modules\threat.lua
+modules\combopoints.lua
+modules\nametext.lua
+modules\leveltext.lua
+modules\healthtext.lua
+modules\castbar.lua
+modules\healthbar.lua
+modules\healthborder.lua
+modules\raidtarget.lua
+modules\classicon.lua
+modules\attackers.lua
+modules\targetclass.lua
+
+ldb.lua
+database.lua
+expimp.lua
