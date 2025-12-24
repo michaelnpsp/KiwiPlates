@@ -1,4 +1,4 @@
-## Interface: 50502
+## Interface: 50503
 ## Title: |cFF7FFF72Kiwi|r Plates
 ## Author: MiCHaEL
 ## Version: @project-version@
