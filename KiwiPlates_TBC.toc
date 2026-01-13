@@ -1,4 +1,4 @@
-## Interface: 20504
+## Interface: 20505
 ## Title: |cFF7FFF72Kiwi|r Plates
 ## Author: MiCHaEL
 ## Version: @project-version@
