@@ -15,7 +15,7 @@ local UnitThreatSituation = UnitThreatSituation
 local UnitDetailedThreatSituation = UnitDetailedThreatSituation
 local UnitGroupRolesAssigned = UnitGroupRolesAssigned or addon.GetCustomDungeonRole
 local GetSpecialization = GetSpecialization or function() end
-local GetSpecializationRole = GetSpecializationRole or function()
+local GetSpecializationRole = not addon.isTBC and GetSpecializationRole or function()
 	local role = UnitGroupRolesAssigned("player") or 'NONE'
 	return role=='NONE' and addon.db.threat.playerRole or role
 end
