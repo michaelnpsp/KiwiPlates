@@ -21,6 +21,7 @@ local C_Timer_After = C_Timer.After
 
 local isClassic = addon.isClassic
 local isVanilla = addon.isVanilla
+local isTBC     = addon.isTBC
 local UNKNOWNOBJECT = UNKNOWNOBJECT
 local IsInRaid = IsInRaid
 local UnitGUID = UnitGUID
@@ -67,7 +68,7 @@ local cfgHealthThreshold1
 local cfgHealthThreshold2
 local cfgClassColorReaction = {}
 local cfgClassicBorders
-local cfgPlatesAdjustW = isClassic and 0 or 24
+local cfgPlatesAdjustW = (isClassic and not isTBC) and 0 or 24
 
 local NamePlates = {}
 local NamePlatesByUnit = {}
@@ -384,10 +385,26 @@ local function DisableBlizzardStuff(UnitFrame)
 	local healthBar = UnitFrame.healthBar
 	healthBar.barTexture:SetColorTexture(0,0,0,0)
 	if isClassic then
-		local level = healthBar:GetFrameLevel()+1
-		UnitFrame.RaidTargetFrame:SetFrameLevel(level)
+		local hbContainer = UnitFrame.HealthBarsContainer
+		if isTBC and hbContainer then -- in TBC healthBar framelevel is 9999 (max), and we need a lower framelevel
+			local level = hbContainer:GetFrameLevel()+1
+			healthBar:SetFrameLevel(level)
+			UnitFrame.RaidTargetFrame:SetFrameLevel(level+10)
+		else
+			local level = healthBar:GetFrameLevel()+1
+			UnitFrame.RaidTargetFrame:SetFrameLevel(level)
+		end
 		UnitFrame.LevelFrame:Hide()
-		if not cfgClassicBorders then healthBar.border:Hide() end
+		if not cfgClassicBorders and healthBar.border then
+			healthBar.border:Hide()
+		end
+		if hbContainer then
+			local border =  hbContainer.border
+			if border then -- TBC border
+				border:SetScript('OnShow', ForceHide)
+				border:Hide()
+			end
+		end
 	else
 		local textures = healthBar.border and healthBar.border.Textures or UnitFrame.HealthBarsContainer.border.Textures
 		for i=#textures,1,-1 do
@@ -432,7 +449,7 @@ local function SkinPlate(plateFrame, UnitFrame, UnitAdded)
 		local healthBar = UnitFrame.healthBar
 		local anchorFrame = UnitFrame.castBar or UnitFrame
 		local gap = db.castBarGap or (isClassic and 0) or nil
-		if gap ~= UnitFrame.castBarGap then
+		if gap ~= UnitFrame.castBarGap and not isTBC then
 			-- in classic we execute this code if gap is not defined to reanchor healthBar the "(isClassic and 0)" above forces to execute this code
 			-- in retail is not necessary because healthBar is already anchored to castBar with "correct" point values
 			local bar = healthContainer or healthBar
@@ -446,9 +463,11 @@ local function SkinPlate(plateFrame, UnitFrame, UnitAdded)
 			if db.kHealthBar_enabled then
 				healthContainer.kkDisabled = nil
 				healthContainer:Show()
+				if isTBC then C_Timer_After(0, function() healthBar:Show(); end) end
 			else
 				healthContainer.kkDisabled = true
 				healthContainer:Hide()
+				if isTBC then healthBar:Hide() end
 			end
 		else
 			healthBar:SetHeight( db.healthBarHeight or 12 )

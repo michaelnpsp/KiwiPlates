@@ -8,7 +8,7 @@ local SetBorderTexture = addon.SetBorderTexture
 -- classic border style (rounded)
 local function CreateHealthBorderClassic(UnitFrame)
 	local healthBar = UnitFrame.healthBar
-	if addon.isClassic then
+	if addon.isClassic and not addon.isTBC then
 		local border = healthBar.border:GetRegions()
 		border:Hide()
 		border:SetParent(nil)
